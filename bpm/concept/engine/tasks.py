@@ -51,6 +51,8 @@ def schedule(process_id):
 
         if process.is_complete():
             Process.objects.filter(pk=p.pk).update(state=2)
+
+        map(lambda x: x.kill(), process._tasklets)
     else:
         print "#" * 40
         print "Got lock failed"
@@ -119,4 +121,5 @@ def start(name, *args, **kwargs):
         p = cls(defination_id=defination.id)
         p.initiate(*args, **kwargs)
         Process.objects.filter(pk=p.process_id).update(pickled=cPickle.dumps(p))
+        map(lambda x: x.kill(), p._tasklets)
         schedule.apply_async(args=(p.process_id,))
