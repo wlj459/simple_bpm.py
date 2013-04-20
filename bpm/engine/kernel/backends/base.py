@@ -1,50 +1,46 @@
+"""
+bpm.engine.kernel.backends.base
+===============================
+
+Task backend base class.
+"""
 import stackless
 
 from ..models import Task
 
 
-class BaseTask(object):
+class BaseTaskBackend(object):
 
     def __init__(self, task_id):
-        self._tasklets = []
+        self._tasklet_registry = {}
+        self._task_id = task_id
 
-        self.task_id = task_id
+    def _destroy(self):
+        map(lambda tasklet: tasklet.kill(), self._registry)
 
-    def add_handler(self, handler):
-        if not handler in self._handlers:
-            self._handlers.append(handler)
-
-    def add_tasklet(self, tasklet):
-        if not tasklet in self._tasklets:
-            self._tasklets.append(tasklet)
-
-    def destroy(self):
-        map(lambda x: x.kill(), self._tasklets)
-
-    def initiate(self, *args, **kwargs):
-        self.add_tasklet(stackless.tasklet(self.start)(*args, **kwargs))
-
-    def instance(self):
+    def _initiate(self, *args, **kwargs):
         try:
-            return Task.objects.get(pk=self.task_id)
+            task = Task.objects.get(pk=self._task_id)
         except Task.DoesNotExist:
             pass
+        else:
+            self._register(stackless.tasklet(self.start)(*args, **kwargs),
+                          task.name)
 
-    def is_complete(self):
-        raise NotImplementedError
+    def _register(self, obj, task_name, obj_type='tasklet'):
+        registry = getattr(self, '_%s_registry' % obj_type)
+        if isinstance(registry, dict):
+            registry[obj] = task_name
 
-    def resume(self):
-        for t in self._tasklets:
-            if not t.alive:
-                self._tasklets.remove(t)
+    def _resume(self):
+        for tasklet in self._tasklet_registry:
+            if tasklet.alive:
+                try:
+                    tasklet.insert()
+                except:
+                    pass
 
-        for t in self._tasklets:
-            try:
-                t.insert()
-            except:
-                pass
-
-    def schedule(self):
+    def _schedule(self):
         raise NotImplementedError
 
     def start(self):
