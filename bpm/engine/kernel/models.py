@@ -69,15 +69,9 @@ class Task(models.Model):
 
     def appoint(self, to_state):
         if to_state in states.APPOINTMENT_STATES:
-            rows = self.__class__.objects.filter(pk=self.pk,
-                                                 _token=self._token)\
-                                         .update(appointment=to_state)
+            self.transit(to_state, appointment=True)
 
-            if rows:
-                self.transit(to_state)
-
-    @transaction.commit_on_success()
-    def _callback(self, return_code=0, data='', ex_data=''):
+    def _callback(self, data='', ex_data='', return_code=0):
         if self.state == states.BLOCKED:
             kwargs = {}
             to_state = states.FAILURE
@@ -89,55 +83,56 @@ class Task(models.Model):
                 kwargs['data'] = json.dumps(data)
                 to_state = states.SUCCESS
 
-            rows = self.__class__.objects.filter(pk=self.pk,
-                                                 _token=self._token)\
-                                         .update(**kwargs)
-
-            if rows:
-                self.transit(to_state)
+            self.transit(to_state, **kwargs)
 
     def callback(self, data):
         self._callback(data=data)
 
     def errback(self, ex_data, return_code=1):
-        assert return_code == 0
-        self._callback(return_code=return_code, ex_data=ex_data)
+        assert return_code != 0
+        self._callback(ex_data=ex_data, return_code=return_code)
 
-    @transaction.commit_on_success()
     def start(self, *args, **kwargs):
         if self.state == states.CREATED:
-            rows = self.__class__.objects.filter(pk=self.pk,
-                                                 _token=self._token)\
-                                         .update(args=json.dumps(args),
-                                                 kwargs=json.dumps(kwargs))
+            self.transit(states.PENDING,
+                         args=json.dumps(args),
+                         kwargs=json.dumps(kwargs))
 
-            if rows:
-                self.transit(states.PENDING)
-
-    def transit(self, to_state):
-        appointment_flag = False
+    def _transit(self, to_state, **kwargs):
+        appointment_flag = 0
         if self.appointment:
             if states.can_transit(self.state, self.appointment):
-                appointment_flag = True
+                appointment_flag = 1
                 if states.State(to_state) < states.State(self.appointment):
+                    appointment_flag = 2
                     to_state = self.appointment
 
         if states.can_transit(self.state, to_state):
-            kwargs = {
+            kwargs = kwargs.update({
                 '_token': utils.generate_salt(),
                 'state': to_state,
-            }
+            })
             if appointment_flag:
                 kwargs['appointment'] = ''
 
             rows = self.__class__.objects.filter(pk=self.pk,
-                                                 _token=self._token)\
+                                                 _token=self._token) \
                                          .update(**kwargs)
 
-            state_change_signal = getattr(signals, 'task_' + to_state.lower())
-            if rows and state_change_signal:
-                instance = self.__class__.objects.get(pk=self.pk)
-                state_change_signal.send(sender=self.__class__, instance=instance)
+            if rows:
+                _instance = self.__class__.objects.get(pk=self.pk)
+                _signal = getattr(signals, 'task_' + to_state.lower())
 
-                if not appointment_flag:
-                    return instance
+                if _signal:
+                    _signal.send(sender=self.__class__, instance=_instance)
+
+                if appointment_flag != 2:
+                    return _instance
+
+    def transit(self, to_state, appointment=False, **kwargs):
+        if appointment:
+            self.__class__.objects.filter(pk=self.pk,
+                                          _token=self._token)\
+                                  .update(appointment=to_state)
+        else:
+            self._transit(to_state, **kwargs)
