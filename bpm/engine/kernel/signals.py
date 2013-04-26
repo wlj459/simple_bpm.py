@@ -1,9 +1,14 @@
 from django.dispatch import Signal
 
-task_confirmed = Signal(providing_args=['instance'])
+pre_exec = Signal(providing_args=['task_id', 'namespace'])
 
-pre_callback = Signal(providing_args=['instance'])
-post_callback = Signal(providing_args=['instance'])
+task_pending = Signal(providing_args=['task_id'])
+task_ready = Signal(providing_args=['task_id'])
+task_running = Signal(providing_args=['task_id'])
+task_blocked = Signal(providing_args=['task_id'])
+task_suspended = Signal(providing_args=['task_id'])
+task_success = Signal(providing_args=['task_id'])
+task_failure = Signal(providing_args=['task_id'])
+task_revoked = Signal(providing_args=['task_id'])
 
-pre_errback = Signal(providing_args=['instance'])
-post_errback = Signal(providing_args=['instance'])
+task_acknowledge = Signal(providing_args=['task_id'])

@@ -16,7 +16,7 @@ class BaseTaskBackend(object):
         self._task_id = task_id
 
     def _destroy(self):
-        map(lambda tasklet: tasklet.kill(), self._registry)
+        map(lambda tasklet: tasklet.kill(), self._tasklet_registry)
 
     def _initiate(self, *args, **kwargs):
         try:

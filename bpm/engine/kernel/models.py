@@ -52,15 +52,21 @@ class Task(models.Model):
         blank=True,
     )
 
-    _archive = models.TextField()
-    _ack = models.PositiveSmallIntegerField(
+    identifier_code = models.SlugField(
+        max_length=6,
+    )
+    token_code = models.SlugField(
+        max_length=6,
+    )
+    archive = models.TextField()
+    ack = models.PositiveSmallIntegerField(
         default=0,
     )
-    _token = models.SlugField(
+    check_code = models.SlugField(
         max_length=6,
         default=utils.generate_salt(),
     )
-    _ttl = models.PositiveSmallIntegerField(
+    ttl = models.PositiveSmallIntegerField(
         default=0,
     )
 
@@ -69,7 +75,7 @@ class Task(models.Model):
 
     def appoint(self, to_state):
         if to_state in states.APPOINTMENT_STATES:
-            self.transit(to_state, appointment=True)
+            return self.transit(to_state, appointment=True)
 
     def _callback(self, data='', ex_data='', return_code=0):
         if self.state == states.BLOCKED:
@@ -109,30 +115,33 @@ class Task(models.Model):
 
         if states.can_transit(self.state, to_state):
             kwargs = kwargs.update({
-                '_token': utils.generate_salt(),
+                'check_code': utils.generate_salt(),
                 'state': to_state,
             })
             if appointment_flag:
                 kwargs['appointment'] = ''
 
             rows = self.__class__.objects.filter(pk=self.pk,
-                                                 _token=self._token) \
+                                                 check_code=self.check_code)\
                                          .update(**kwargs)
 
             if rows:
-                _instance = self.__class__.objects.get(pk=self.pk)
                 _signal = getattr(signals, 'task_' + to_state.lower())
 
                 if _signal:
-                    _signal.send(sender=self.__class__, instance=_instance)
+                    _signal.send(sender=self.__class__, task_id=self.id)
 
                 if appointment_flag != 2:
-                    return _instance
+                    return True
+
+        return False
 
     def transit(self, to_state, appointment=False, **kwargs):
         if appointment:
-            self.__class__.objects.filter(pk=self.pk,
-                                          _token=self._token)\
-                                  .update(appointment=to_state)
+            rows = self.__class__.objects.filter(pk=self.pk,
+                                                 check_code=self.check_code)\
+                                         .update(appointment=to_state)
+
+            return True if rows else False
         else:
-            self._transit(to_state, **kwargs)
+            return self._transit(to_state, **kwargs)

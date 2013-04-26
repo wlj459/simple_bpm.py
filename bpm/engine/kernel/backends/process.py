@@ -12,16 +12,22 @@ from .base import BaseTaskBackend
 
 class TaskHandler(object):
 
-    PROCESS_CACHE_KEY = '_process'
-
     def __init__(self, process, task_name, predecessors=[]):
-        self.blocked = False
         self.process = process
         self.task_name = task_name
         self.predecessors = predecessors
 
-        self.process._register(self, task_name, obj_type='handler')
-        self.process_id = self.process._task_id
+        try:
+            parent = Task.objects.get(pk=process._task_id)
+        except Task.DoesNotExist:
+            pass
+        else:
+            task = Task(name=task_name,
+                        parent=parent,
+                        ttl=parent.ttl + 1)
+            task.save()
+            self.task_id = task.id
+            process._register(self, task_name, obj_type='handler')
 
     def __call__(self, *args, **kwargs):
         self.process._register(stackless.tasklet(self.handle)(*args, **kwargs),
@@ -44,41 +50,24 @@ class TaskHandler(object):
                 v = v.read()
             cleaned_kwargs[k] = v
 
-        task = Task(name=self.task_name,
-                    parent=self.parent(),
-                    ttl=self.parent().ttl)
-        task.save()
-
-        setattr(self, 'task_id', task.id)
+        Task.objects.filter(pk=self.task_id)\
+                    .update(args=json.dumps(cleaned_args),
+                            kwargs=json.dumps(cleaned_kwargs))
+        signals.task_ready.send(sender=self, instance=self.instance())
 
     def instance(self):
         try:
-            return Task.objects.get(pk=getattr(self, 'task_id'))
+            return Task.objects.get(pk=self.task_id)
         except Task.DoesNotExist:
             pass
 
     def join(self):
         task = self.instance()
-        while not task.state in states.READY_STATES:
-            self.blocked = True
+        while task.state == states.BLOCKED:
             stackless.schedule()
             task = self.instance()
 
-        self.blocked = False
-        signals.task_confirmed.send(sender=self.__class__, instance=task)
         return task
-
-    def parent(self):
-        if hasattr(self, self.PROCESS_CACHE_KEY):
-            return getattr(self, self.PROCESS_CACHE_KEY)
-        else:
-            try:
-                task = Task.objects.get(pk=self.process_id)
-            except Task.DoesNotExist:
-                pass
-            else:
-                setattr(self, self.PROCESS_CACHE_KEY, task)
-                return task
 
     def read(self):
         task = self.join()
