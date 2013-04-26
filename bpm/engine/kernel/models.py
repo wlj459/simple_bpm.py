@@ -120,16 +120,21 @@ class Task(models.Model):
             })
             if appointment_flag:
                 kwargs['appointment'] = ''
+            if to_state in states.ARCHIVED_STATES:
+                kwargs['archive'] = ''
 
             rows = self.__class__.objects.filter(pk=self.pk,
                                                  check_code=self.check_code)\
                                          .update(**kwargs)
 
             if rows:
+                for k, v in kwargs.iteritems():
+                    setattr(self, k, v)
+
                 _signal = getattr(signals, 'task_' + to_state.lower())
 
                 if _signal:
-                    _signal.send(sender=self.__class__, task_id=self.id)
+                    _signal.send(sender=self.__class__, instance=self)
 
                 if appointment_flag != 2:
                     return True

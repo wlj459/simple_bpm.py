@@ -16,8 +16,8 @@ def acknowledge(task_id):
     except Task.DoesNotExist:
         pass
     else:
-        if not task._ack:
-            signals.task_acknowledge.send(sender=acknowledge, task_id=task_id)
+        if not task.ack:
+            signals.task_acknowledge.send(sender=acknowledge, instance=task)
 
 
 @celery.task(ignore_result=True)
@@ -41,7 +41,7 @@ def schedule(task_id):
                 while backend.schedule():
                     stackless.schedule()
 
-                Task.objects.filter(pk=task.pk).update(archive=pickle.dumps(backend))
+                task.transit(states.BLOCKED, archive=pickle.dumps(backend))
                 backend.destroy()
 
 
