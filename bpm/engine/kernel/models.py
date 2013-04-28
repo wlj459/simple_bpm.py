@@ -16,7 +16,7 @@ class Definition(models.Model):
             (1, 'COMPONENT'),
         )
     )
-    content = models.TextField()
+    text = models.TextField()
 
     def __unicode__(self):
         return self.name
@@ -43,7 +43,7 @@ class Task(models.Model):
     state = models.CharField(
         max_length=16,
         choices=zip(states.ALL_STATES, states.ALL_STATES),
-        default=states.CREATED,
+        default=states.PENDING,
     )
     appointment = models.CharField(
         max_length=16,
@@ -98,13 +98,7 @@ class Task(models.Model):
         assert return_code != 0
         self._callback(ex_data=ex_data, return_code=return_code)
 
-    def start(self, *args, **kwargs):
-        if self.state == states.CREATED:
-            self.transit(states.PENDING,
-                         args=json.dumps(args),
-                         kwargs=json.dumps(kwargs))
-
-    def _transit(self, to_state, **kwargs):
+    def __transit(self, to_state, countdown=0, **kwargs):
         appointment_flag = 0
         if self.appointment:
             if states.can_transit(self.state, self.appointment):
@@ -120,7 +114,7 @@ class Task(models.Model):
             })
             if appointment_flag:
                 kwargs['appointment'] = ''
-            if to_state in states.ARCHIVED_STATES:
+            if to_state in states.ARCHIVE_STATES:
                 kwargs['archive'] = ''
 
             rows = self.__class__.objects.filter(pk=self.pk,
@@ -131,17 +125,20 @@ class Task(models.Model):
                 for k, v in kwargs.iteritems():
                     setattr(self, k, v)
 
-                _signal = getattr(signals, 'task_' + to_state.lower())
+                state_change_signal = getattr(signals,
+                                              'task_' + to_state.lower())
 
-                if _signal:
-                    _signal.send(sender=self.__class__, instance=self)
+                if state_change_signal:
+                    state_change_signal.send(sender=self.__class__,
+                                             instance=self,
+                                             countdown=countdown)
 
                 if appointment_flag != 2:
                     return True
 
         return False
 
-    def transit(self, to_state, appointment=False, **kwargs):
+    def transit(self, to_state, appointment=False, countdown=0, **kwargs):
         if appointment:
             rows = self.__class__.objects.filter(pk=self.pk,
                                                  check_code=self.check_code)\
@@ -149,4 +146,4 @@ class Task(models.Model):
 
             return True if rows else False
         else:
-            return self._transit(to_state, **kwargs)
+            return self.__transit(to_state, countdown, kwargs)

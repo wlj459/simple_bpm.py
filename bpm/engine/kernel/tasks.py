@@ -3,8 +3,7 @@ import celery
 import cPickle as pickle
 import stackless
 
-from . import signals, states
-from .execution import ExecutionManager
+from . import execution, signals, states, utils
 from .models import Task
 
 
@@ -29,19 +28,19 @@ def schedule(task_id):
         pass
     else:
         if task.transit(states.RUNNING):
-            execution = ExecutionManager(task_id)
-            if execution.succeeded:
-                definition = execution[task.name]
-                globals()[task.name] = definition
+            executor = execution.Executor(task)
+            if executor.execute():
+                cls = executor.get_definition()
 
-                backend = pickle.loads(str(task.archive))
-                backend.resume()
+                with utils.PickleHelper(cls):
+                    backend = pickle.loads(str(task.archive))
+                    backend.resume()
 
-                stackless.schedule()
-                while backend.schedule():
                     stackless.schedule()
+                    while backend.schedule():
+                        stackless.schedule()
 
-                task.transit(states.BLOCKED, archive=pickle.dumps(backend))
+                    task.transit(states.BLOCKED, archive=pickle.dumps(backend))
                 backend.destroy()
 
 
@@ -49,16 +48,15 @@ def schedule(task_id):
 def initiate(task_id):
 
     try:
-        task = Task.objects.get(pk=task_id)
+        task = Task.objects.get(pk=task_id, state=states.PENDING)
     except Task.DoesNotExist:
         pass
     else:
-        execution = ExecutionManager(task_id)
-        if execution.succeeded:
-            definition = execution[task.name]
-            globals()[task.name] = definition
+        executor = execution.Executor(task)
+        if executor.execute():
+            cls = executor.get_definition()
 
-            backend = definition(task_id)
+            backend = cls(task_id)
 
             args = []
             if task.args:
@@ -69,5 +67,6 @@ def initiate(task_id):
                 kwargs = json.loads(task.kwargs)
 
             backend.initiate(*args, **kwargs)
-            task.transit(states.READY, archive=pickle.dumps(backend))
+            with utils.PickleHelper(cls):
+                task.transit(states.READY, archive=pickle.dumps(backend))
             backend.destroy()
