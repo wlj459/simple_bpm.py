@@ -1,8 +1,7 @@
 from django.dispatch import Signal
 
-pre_exec = Signal(providing_args=['instance', 'namespace'])
+lazy_transit = Signal(providing_args=['task_id', 'to_state', 'countdown'])
 
-task_pending = Signal(providing_args=['instance'])
 task_ready = Signal(providing_args=['instance'])
 task_running = Signal(providing_args=['instance'])
 task_blocked = Signal(providing_args=['instance'])

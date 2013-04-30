@@ -5,7 +5,6 @@ bpm.engine.kernel.states
 Built-in task states.
 """
 
-CREATED = 'CREATED'
 PENDING = 'PENDING'
 READY = 'READY'
 RUNNING = 'RUNNING'
@@ -15,9 +14,11 @@ SUCCESS = 'SUCCESS'
 FAILURE = 'FAILURE'
 REVOKED = 'REVOKED'
 
-ALL_STATES = frozenset([CREATED, PENDING, READY, RUNNING,
-                        BLOCKED, SUSPENDED, SUCCESS, FAILURE, REVOKED])
-ARCHIVED_STATES = frozenset([SUCCESS, FAILURE, REVOKED])
+APPOINTMENT_STATES = frozenset([READY, SUSPENDED, REVOKED])
+ARCHIVE_STATES = frozenset([SUCCESS, FAILURE, REVOKED])
+
+ALL_STATES = frozenset([PENDING, READY, RUNNING, BLOCKED,
+                        SUSPENDED, SUCCESS, FAILURE, REVOKED])
 
 
 class ConstantDict(dict):
@@ -37,8 +38,7 @@ class ConstantDict(dict):
 
 
 _PRECEDENCE = ConstantDict({
-    CREATED: 1,
-    PENDING: 2,
+    PENDING: 0,
     READY: 10,
     RUNNING: 11,
     BLOCKED: 12,
@@ -53,15 +53,15 @@ def precedence(state):
     """Get the precedence for state::
 
     >>> precedence(PENDING)
-    2
+    0
 
     >>> precedence('UNKNOWN')
-    0
+    -1
     """
     if state in _PRECEDENCE:
         return _PRECEDENCE[state]
     else:
-        return 0
+        return -1
 
 
 class State(str):
@@ -92,7 +92,6 @@ class State(str):
 
 
 _TRANSITION = ConstantDict({
-    CREATED: frozenset([PENDING, REVOKED]),
     PENDING: frozenset([READY, REVOKED]),
     READY: frozenset([RUNNING, REVOKED, SUSPENDED]),
     RUNNING: frozenset([BLOCKED, SUCCESS, FAILURE]),
@@ -107,10 +106,10 @@ _TRANSITION = ConstantDict({
 def can_transit(from_state, to_state):
     """Test if :param:`from_state` can transit to :param:`to_state`::
 
-    >>> can_transit(CREATED, PENDING)
+    >>> can_transit(PENDING, READY)
     True
 
-    >>> can_transit(CREATED, READY)
+    >>> can_transit(PENDING, RUNNING)
     False
     """
     if from_state in _TRANSITION:
