@@ -70,3 +70,14 @@ def initiate(task_id):
             with utils.PickleHelper(cls):
                 task.transit(states.READY, archive=pickle.dumps(backend))
             backend.destroy()
+
+
+@celery.task(ignore_result=True)
+def transit(task_id, to_state, **kwargs):
+
+    try:
+        task = Task.objects.get(pk=task_id)
+    except Task.DoesNotExist:
+        pass
+    else:
+        Task.objects.transit(task, to_state, **kwargs)

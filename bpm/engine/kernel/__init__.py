@@ -7,14 +7,21 @@ from .models import Task
 
 
 @receiver(post_save, sender=Task)
+def lazy_transit_handler(sender, task_id, to_state, countdown, **kwargs):
+    tasks.transit.apply_async(args=(task_id, to_state),
+                              kwargs=kwargs,
+                              countdown=countdown)
+
+
+@receiver(post_save, sender=Task)
 def task_post_save_handler(sender, instance, created, **kwargs):
     if created:
         tasks.initiate.apply_async(args=(instance.id,))
 
 
 @receiver(signals.task_ready, sender=Task)
-def task_ready_handler(sender, instance, countdown, **kwargs):
-    tasks.schedule.apply_async(args=(instance.id,), countdown=countdown)
+def task_ready_handler(sender, instance, **kwargs):
+    tasks.schedule.apply_async(args=(instance.id,))
 
 
 @receiver(signals.task_success, sender=Task)

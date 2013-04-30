@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import json
 
 from django.db import models, transaction
@@ -20,6 +22,51 @@ class Definition(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+class TaskManager(models.Manager):
+
+    def transit(self, instance, to_state, **kwargs):
+        assert isinstance(instance, self.model)
+
+        appointment_flag = 0  # 没有处理预约
+        if instance.appointment:
+            if states.can_transit(instance.state, instance.appointment):
+                appointment_flag = 1  # 处理了预约但未设置为预约状态
+                if states.State(to_state) < states.State(instance.appointment):
+                    appointment_flag = 2  # 设置为预约状态
+                    to_state = instance.appointment
+
+        if states.can_transit(instance.state, to_state):
+            kwargs = kwargs.update({
+                'check_code': utils.generate_salt(),
+                'state': to_state,
+            })
+            if appointment_flag:  # 一旦处理了预约，就将其置空
+                kwargs['appointment'] = ''
+            if to_state in states.ARCHIVE_STATES:
+                kwargs['archive'] = ''
+
+            rows = self.model.objects.filter(
+                pk=instance.pk,
+                check_code=instance.check_code
+            ).update(**kwargs)
+
+            if rows:
+                for k, v in kwargs.iteritems():
+                    setattr(instance, k, v)
+
+                state_change_signal = getattr(signals,
+                                              'task_' + to_state.lower())
+
+                if state_change_signal:
+                    state_change_signal.send(sender=instance.__class__,
+                                             instance=instance)
+
+                if appointment_flag != 2:
+                    return True
+
+        return False
 
 
 class Task(models.Model):
@@ -70,6 +117,8 @@ class Task(models.Model):
         default=0,
     )
 
+    objects = TaskManager()
+
     def __unicode__(self):
         return self.name
 
@@ -98,47 +147,7 @@ class Task(models.Model):
         assert return_code != 0
         self._callback(ex_data=ex_data, return_code=return_code)
 
-    def __transit(self, to_state, countdown=0, **kwargs):
-        appointment_flag = 0
-        if self.appointment:
-            if states.can_transit(self.state, self.appointment):
-                appointment_flag = 1
-                if states.State(to_state) < states.State(self.appointment):
-                    appointment_flag = 2
-                    to_state = self.appointment
-
-        if states.can_transit(self.state, to_state):
-            kwargs = kwargs.update({
-                'check_code': utils.generate_salt(),
-                'state': to_state,
-            })
-            if appointment_flag:
-                kwargs['appointment'] = ''
-            if to_state in states.ARCHIVE_STATES:
-                kwargs['archive'] = ''
-
-            rows = self.__class__.objects.filter(pk=self.pk,
-                                                 check_code=self.check_code)\
-                                         .update(**kwargs)
-
-            if rows:
-                for k, v in kwargs.iteritems():
-                    setattr(self, k, v)
-
-                state_change_signal = getattr(signals,
-                                              'task_' + to_state.lower())
-
-                if state_change_signal:
-                    state_change_signal.send(sender=self.__class__,
-                                             instance=self,
-                                             countdown=countdown)
-
-                if appointment_flag != 2:
-                    return True
-
-        return False
-
-    def transit(self, to_state, appointment=False, countdown=0, **kwargs):
+    def transit(self, to_state, appointment=False, **kwargs):
         if appointment:
             rows = self.__class__.objects.filter(pk=self.pk,
                                                  check_code=self.check_code)\
@@ -146,4 +155,11 @@ class Task(models.Model):
 
             return True if rows else False
         else:
-            return self.__transit(to_state, countdown, kwargs)
+            return self.__class__.objects.transit(self, to_state, **kwargs)
+
+    def transit_lazy(self, to_state, countdown=0, **kwargs):
+        signals.lazy_transit.send(sender=self.__class__,
+                                  task_id=self.pk,
+                                  to_state=to_state,
+                                  countdown=countdown,
+                                  **kwargs)
