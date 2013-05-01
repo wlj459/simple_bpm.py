@@ -55,9 +55,3 @@ class BaseTaskBackend(object):
     def start(self, *args, **kwargs):
         raise NotImplementedError
 
-    def before_start(self, *args, **kwargs):
-        pass
-
-    def after_start(self, result, *args, **kwargs):
-        pass
-
