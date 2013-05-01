@@ -1,6 +1,8 @@
 from RestrictedPython import compile_restricted
 from RestrictedPython.Guards import safe_builtins
 
+from .backends.process import BaseProcess
+from .backends.component import BaseComponent
 from .models import Definition
 
 
@@ -15,11 +17,18 @@ class Executor(object):
         self.__namespace['_getattr_'] = getattr
         self.__namespace['_getitem_'] = lambda obj, key: obj[key]
         self.__namespace['_write_'] = setattr
+
+        self.__namespace['BaseComponent'] = BaseComponent
+        self.__namespace['BaseProcess'] = BaseProcess
+
+        self.__namespace['__name__'] = 'bpms.test'
+
         try:
             exec compile_restricted(source, '<string>', 'exec') in self.__namespace
         except:
             # signals.exec_exception.send(sender=self)
-            self.__succeeded = False
+            import traceback
+            traceback.print_exc()
         else:
             self.__succeeded = True
 
@@ -29,7 +38,6 @@ class Executor(object):
         try:
             definition = Definition.objects.get(name=self.task.name)
         except Definition.DoesNotExist:
-            self.__succeeded = False
             return False
         else:
             return self.__execute(definition.text)
