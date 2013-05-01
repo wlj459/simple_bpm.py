@@ -27,6 +27,7 @@ class BaseComponent(BaseTaskBackend):
         self.task = None
         self.countdown = 0
         self.schedule_count = 1
+        self.algorithm = self.simple_schedule_algorithm
 
     def start(self, *args, **kwargs):
         """
