@@ -27,6 +27,7 @@ class BaseComponent(BaseTaskBackend):
         self.task = None
         self.countdown = 0
         self.schedule_count = 1
+        self.callback_flag = False
 
     def start(self, *args, **kwargs):
         """
@@ -70,6 +71,10 @@ class BaseComponent(BaseTaskBackend):
         self.schedule_count = count
 
     def _schedule(self, *args, **kwargs):
+        return False
+        if self.callback_flag:
+            return False
+
         try:
             task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance
         except Task.DoesNotExist:
@@ -85,6 +90,8 @@ class BaseComponent(BaseTaskBackend):
 
     def callback(self, data):
         """success的通知"""
+        print "CALLBACK"
+        self.callback_flag = True
         try:
             task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance, 免得每次这样搞
 
@@ -95,6 +102,7 @@ class BaseComponent(BaseTaskBackend):
 
     def errback(self, ex_data):
         """error时的通知"""
+        self.callback_flag = True
         try:
             task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance, 免得每次这样搞
         except Task.DoesNotExist:

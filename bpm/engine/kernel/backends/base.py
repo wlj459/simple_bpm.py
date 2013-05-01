@@ -12,9 +12,10 @@ from ..models import Task
 
 
 class BaseTaskBackend(object):
-    def __init__(self, task_id):
+    def __init__(self, task_id, task_name):
         self._tasklet_registry = {}
         self._task_id = task_id
+        self._task_name = task_name
 
     def _destroy(self):
         map(lambda tasklet: tasklet.kill(), self._tasklet_registry)

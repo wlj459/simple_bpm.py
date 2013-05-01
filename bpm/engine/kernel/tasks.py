@@ -34,14 +34,14 @@ def schedule(task_id):
 
                 with utils.PickleHelper(cls):
                     backend = pickle.loads(str(task.archive))
-                    backend.resume()
+                    backend._resume()
 
                     stackless.schedule()
-                    while backend.schedule():
+                    while backend._schedule():
                         stackless.schedule()
 
                     task.transit(states.BLOCKED, archive=pickle.dumps(backend))
-                backend.destroy()
+                backend._destroy()
 
 
 @celery.task(ignore_result=True)
@@ -56,7 +56,7 @@ def initiate(task_id):
         if executor.execute():
             cls = executor.get_definition()
 
-            backend = cls(task_id)
+            backend = cls(task.pk, task.name)
 
             args = []
             if task.args:
@@ -66,10 +66,10 @@ def initiate(task_id):
             if task.kwargs:
                 kwargs = json.loads(task.kwargs)
 
-            backend.initiate(*args, **kwargs)
+            backend._initiate(*args, **kwargs)
             with utils.PickleHelper(cls):
                 task.transit(states.READY, archive=pickle.dumps(backend))
-            backend.destroy()
+            backend._destroy()
 
 
 @celery.task(ignore_result=True)

@@ -38,7 +38,7 @@ class TaskManager(models.Manager):
                     to_state = instance.appointment
 
         if states.can_transit(instance.state, to_state):
-            kwargs = kwargs.update({
+            kwargs.update({
                 'check_code': utils.generate_salt(),
                 'state': to_state,
             })
@@ -127,7 +127,7 @@ class Task(models.Model):
             return self.transit(to_state, appointment=True)
 
     def _callback(self, data='', ex_data='', return_code=0):
-        if self.state == states.BLOCKED:
+        if self.state == states.RUNNING:
             kwargs = {}
             to_state = states.FAILURE
 

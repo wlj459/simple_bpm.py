@@ -6,7 +6,6 @@ import types
 class PickleHelper(object):
 
     def __init__(self, cls):
-        assert isinstance(cls, types.ClassType)
         self.cls = cls
 
         cls_module = getattr(cls, '__module__', '')

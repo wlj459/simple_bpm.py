@@ -19,16 +19,17 @@ class TaskHandler(object):
         目前看这种方式似乎是安全的
         TODO: review
     """
-    def __init__(self, process, task, predecessors=[]):
-        if issubclass(task, BaseTaskBackend):
-            self.process = process
-            self.task_name = "%s.%s" % (task.__module__, task.__name__)
-            self.predecessors = predecessors
-            self.identifier_code = generate_salt()
-            self.token_code = generate_salt()
-            process._register(self, self.task_name, obj_type='handler')
-        else:
-            pass  # TODO: raise exception or do something else?
+    def __init__(self, process, name, predecessors=None):
+        self.process = process
+        self.task_name = name
+
+        if predecessors is None:
+            predecessors = []
+        self.predecessors = predecessors
+
+        self.identifier_code = generate_salt()
+        self.token_code = generate_salt()
+        self.process._register(self, self.task_name, obj_type='handler')
 
     def __call__(self, *args, **kwargs):
         self.process._register(stackless.tasklet(self.handle)(*args, **kwargs),
@@ -56,37 +57,31 @@ class TaskHandler(object):
         except Task.DoesNotExist:
             pass
         else:
-            try:
-                task = Task(name=self.task_name,
-                            parent=parent,
-                            identifier_code=self.identifier_code,
-                            token_code=self.token_code,
-                            args=json.dumps(cleaned_args),
-                            kwargs=json.dumps(cleaned_kwargs),
-                            ttl=parent.ttl + 1)
-                task.save()
-            except Exception, e:
-                task = Task(name=self.task_name,
-                            parent=parent,
-                            identifier_code=self.identifier_code,
-                            token_code=self.token_code,
-                            ex_data=str(e),
-                            state=states.FAILURE,
-                            ttl=parent.ttl + 1)
-                task.save()     # TODO: 需要svein实现post_save中的处理逻辑，如果创建出来的任务状态是FAILURE,就不执行了
+            task = Task(name=self.task_name,
+                        parent=parent,
+                        identifier_code=self.identifier_code,
+                        token_code=self.token_code,
+                        args=json.dumps(cleaned_args),
+                        kwargs=json.dumps(cleaned_kwargs),
+                        ttl=parent.ttl + 1)
+            task.save()
 
     @transaction.commit_on_success()    # 需要在一个事务中完成，否则可能出现幻读
     def instance(self):
         try:
-            return Task.objects.get(identifier_code=self.identifier_code, token_code=self.token_code)
+            return Task.objects.get(identifier_code=self.identifier_code,
+                                    token_code=self.token_code)
         except Task.DoesNotExist:
             pass
 
     def join(self):
         task = self.instance()
-        while task.state == states.BLOCKED:
+        if task:
+            while task.state == states.BLOCKED:
+                stackless.schedule()
+                task = self.instance()
+        else:
             stackless.schedule()
-            task = self.instance()
 
         return task
 
@@ -100,24 +95,31 @@ class BaseProcess(BaseTaskBackend):
     def __init__(self, *args, **kwargs):
         super(BaseProcess, self).__init__(*args, **kwargs)
 
+        self.count = 0
         self._handler_registry = {}
 
     def _schedule(self):
-        alive_count = block_count = 0
-        for tasklet in self._tasklet_registry[1:]:  # process本身的主tasklet不计算在内
+        alive_tasklet_count = 0
+        for tasklet, name in self._tasklet_registry.iteritems():
             if tasklet.alive:
-                alive_count += 1
-        for handler in self._handler_registry:
-            if handler.blocked:
-                block_count += 1
+                if name != self._task_name:
+                    alive_tasklet_count += 1
 
-        # TODO: review this code
-        # 这个地方-1好像是为了解决process中的start只加载了一个handler后就阻塞了的情况下后，出现的无限循环问题
-        return alive_count - 1 > block_count if self._tasklet_registry[0].alive else alive_count > block_count
+        blocked_handler_count = 0
+        archived_handler_count = 0
+        for handler, name in self._handler_registry.iteritems():
+            instance = handler.instance()
+            if not instance or instance.state == states.BLOCKED:
+                blocked_handler_count += 1
+            if instance and instance.state in states.ARCHIVE_STATES:
+                archived_handler_count += 1
 
-        # def tasklet(self, task_name, predecessors=[]):
+        if alive_tasklet_count > blocked_handler_count:
+            return True
 
-    #     return TaskHandler(self, task_name, predecessors)
+        if not alive_tasklet_count and not blocked_handler_count and archived_handler_count == len(self._handler_registry):
+            Task.objects.transit(Task.objects.get(pk=self._task_id), states.SUCCESS)
+
     def tasklet(self, task, predecessors=[]):
         return TaskHandler(self, task, predecessors)    # here task is a class inherited from BaskTask
 
