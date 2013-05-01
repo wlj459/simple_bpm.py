@@ -6,7 +6,7 @@ from . import signals, states, tasks
 from .models import Task
 
 
-@receiver(post_save, sender=Task)
+@receiver(signals.lazy_transit, sender=Task)
 def lazy_transit_handler(sender, task_id, to_state, countdown, **kwargs):
     tasks.transit.apply_async(args=(task_id, to_state),
                               kwargs=kwargs,
