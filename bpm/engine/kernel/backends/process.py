@@ -103,16 +103,16 @@ class BaseProcess(BaseTaskBackend):
 
     def _schedule(self):
         alive_count = block_count = 0
-        for tasklet in self._tasklet_registry[1:]:  # process本身的主tasklet不计算在内
+        for tasklet, task_name in self._tasklet_registry.items():  # TODO: 这里有问题，process本身的主tasklet不计算在内
             if tasklet.alive:
                 alive_count += 1
-        for handler in self._handler_registry:
-            if handler.blocked:
+        for handler, task_name in self._handler_registry.items():
+            task = handler.instance()
+            if task.state == states.BLOCKED:
                 block_count += 1
 
         # TODO: review this code
-        # 这个地方-1好像是为了解决process中的start只加载了一个handler后就阻塞了的情况下后，出现的无限循环问题
-        return alive_count - 1 > block_count if self._tasklet_registry[0].alive else alive_count > block_count
+        return alive_count - 1 > block_count
 
         # def tasklet(self, task_name, predecessors=[]):
 
