@@ -20,7 +20,7 @@ class TaskHandler(object):
         TODO: review
     """
     def __init__(self, process, task, predecessors=[]):
-        if issubclass(process, BaseTaskBackend):
+        if issubclass(task, BaseTaskBackend):
             self.process = process
             self.task_name = "%s.%s" % (task.__module__, task.__name__)
             self.predecessors = predecessors

@@ -25,16 +25,8 @@ class BaseComponent(BaseTaskBackend):
         super(BaseComponent, self).__init__(*args, **kwargs)
         self.result = None
         self.task = None
-
-
-    def init(self, defination_id, task_id):
-        """组件和一个过程不同，不能直接执行，只能通过一个任务来启动"""
-        if not task_id:
-            return False, "need task_id"
-        try:
-            self.task = Task.objects.get(pk=task_id)
-        except Task.DoesNotExist:
-            return False, "task instance not exist， task_id=%s" % task_id
+        self.countdown = 0
+        self.schedule_count = 1
 
     def start(self, *args, **kwargs):
         """
@@ -43,7 +35,7 @@ class BaseComponent(BaseTaskBackend):
         """
         raise NotImplementedError
 
-    def scheduler(self, on_schedule_method, algorithm=None, *args, **kwargs):
+    def scheduler(self, algorithm=None,*args, **kwargs):
         """
             组件开发者如果需要对异步接口进行同步的话，可以使用该方法，
             这个方法会调用用户传递的一个处理方法来进行
@@ -54,30 +46,84 @@ class BaseComponent(BaseTaskBackend):
                 if result['return'] == 0:
                     self.callback(result)
                 elif result['return'] = 3:
-                    self.err_back(result)
+                    self.errback(result)
 
             def start():
                 # do something
                 self.sid = async_api_call()
+                self.algorithm_init(init_countdown=10)
+                self.algorithm = simple_schedule_algorithm
                 scheduler()
         """
+
+        # delay
+        #
+        if algorithm is None:
+            self.algorithm = self.simple_schedule_algorithm
+        else:
+            self.algorithm = algorithm
+        self._schedule()
+
+    def algorithm_init(self, init_countdown=0, step=0, count=1):
+        self.countdown = init_countdown
+        self.step = step
+        self.schedule_count = count
 
     def _schedule(self, *args, **kwargs):
         try:
             task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance
         except Task.DoesNotExist:
-            pass
+            pass  # TODO
         else:
+            self.algorithm()
             self._register(stackless.tasklet(self.on_schedule)(*args, **kwargs),
                            task.name)
-            task.transit(states.READY)
+            task.transit_lazy(states.READY, countdown=self.countdown)
+            self.schedule_count += 1
+
         return False
 
-    def _callback(self):
-        """任务完成的通知"""
-        print "%s callback with result = %s" % (self.__class__, str(self.result))
-        self.task.result = self.result
-        callback.delay(self.task.id, self.result)
+    def callback(self, data):
+        """success的通知"""
+        try:
+            task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance, 免得每次这样搞
+
+        except Task.DoesNotExist:
+            pass  # TODO
+        else:
+            task.callback(data)
+
+    def errback(self, ex_data):
+        """error时的通知"""
+        try:
+            task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance, 免得每次这样搞
+        except Task.DoesNotExist:
+            pass  # TODO
+        else:
+            task.errback(ex_data)
 
     def on_schedule(self):
         raise NotImplementedError
+
+    def simple_schedule_algorithm(self):
+        """使用固定的countdown"""
+        pass
+
+    def multiplication_algorithm(self):
+        """等值倍增"""
+        self.countdown *= self.schedule_count
+
+    def step_increment_algorithm(self):
+        """步进递增"""
+        self.countdown += self.step
+
+    def fibonacci_algorithm(self, num=None):
+        """just for fun, no used"""
+        if num is None: num = self.schedule_count
+        if num <= 2:
+            f = 1
+        else:
+            f = self.fibonacci_algorithm(num-1) + self.fibonacci_algorithm(num - 2)
+        self.countdown = f
+        return f
+
