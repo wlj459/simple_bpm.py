@@ -19,16 +19,15 @@ class TaskHandler(object):
         目前看这种方式似乎是安全的
         TODO: review
     """
-    def __init__(self, process, task, predecessors=[]):
-        if issubclass(task, BaseTaskBackend):
-            self.process = process
-            self.task_name = "%s.%s" % (task.__module__, task.__name__)
-            self.predecessors = predecessors
-            self.identifier_code = generate_salt()
-            self.token_code = generate_salt()
-            process._register(self, self.task_name, obj_type='handler')
-        else:
-            pass  # TODO: raise exception or do something else?
+    def __init__(self, process, task_name, predecessors=[]):
+
+        self.process = process
+        self.task_name = task_name
+        self.predecessors = predecessors
+        self.identifier_code = generate_salt()
+        self.token_code = generate_salt()
+        process._register(self, self.task_name, obj_type='handler')
+
 
     def __call__(self, *args, **kwargs):
         self.process._register(stackless.tasklet(self.handle)(*args, **kwargs),
@@ -118,8 +117,14 @@ class BaseProcess(BaseTaskBackend):
         # def tasklet(self, task_name, predecessors=[]):
 
     #     return TaskHandler(self, task_name, predecessors)
-    def tasklet(self, task, predecessors=[]):
-        return TaskHandler(self, task, predecessors)    # here task is a class inherited from BaskTask
+    def tasklet(self, task, predecessors=None):
+        if not predecessors: predecessors = []
+        if issubclass(task, BaseTaskBackend):
+            return TaskHandler(self, "%s.%s" % (task.__module__, task.__name__), predecessors)    # here task is a class inherited from BaskTask
+        elif isinstance(task, basestring):
+            return TaskHandler(self, task, predecessors)
+        else:
+            pass  # TODO something
 
 
 def join(*handlers):
