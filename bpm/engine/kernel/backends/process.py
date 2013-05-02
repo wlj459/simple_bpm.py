@@ -37,6 +37,9 @@ class TaskHandler(object):
         return self
 
     def handle(self, *args, **kwargs):
+        print "#" * 40
+        print "HANDLE"
+        print "#" * 40
         if self.predecessors:
             join(*self.predecessors)
 
@@ -76,12 +79,9 @@ class TaskHandler(object):
 
     def join(self):
         task = self.instance()
-        if task:
-            while task.state == states.BLOCKED:
-                stackless.schedule()
-                task = self.instance()
-        else:
+        while not task or task.state not in states.ARCHIVE_STATES:
             stackless.schedule()
+            task = self.instance()
 
         return task
 
@@ -107,12 +107,32 @@ class BaseProcess(BaseTaskBackend):
 
         blocked_handler_count = 0
         archived_handler_count = 0
+        unhandled_handler_count = 0
         for handler, name in self._handler_registry.iteritems():
             instance = handler.instance()
-            if not instance or instance.state == states.BLOCKED:
-                blocked_handler_count += 1
-            if instance and instance.state in states.ARCHIVE_STATES:
-                archived_handler_count += 1
+            if instance:
+                if instance.state == states.BLOCKED:
+                    blocked_handler_count += 1
+                elif instance.state in states.ARCHIVE_STATES:
+                    archived_handler_count += 1
+            else:
+                unhandled_handler_count += 1
+
+        tips = """\n
+alive_tasklet_count:        %(alive_tasklet_count)s
+blocked_handler_count:      %(blocked_handler_count)s
+archived_handler_count:     %(archived_handler_count)s
+unhandled_handler_count:    %(unhandled_handler_count)s
+        \n""" % locals()
+
+        print tips
+
+        if unhandled_handler_count:
+            if hasattr(self, 'handle_unhandled_flag'):
+                return False
+            else:
+                setattr(self, 'handle_unhandled_flag', True)
+                return True
 
         if alive_tasklet_count > blocked_handler_count:
             return True
@@ -120,13 +140,12 @@ class BaseProcess(BaseTaskBackend):
         if not alive_tasklet_count and not blocked_handler_count and archived_handler_count == len(self._handler_registry):
             Task.objects.transit(Task.objects.get(pk=self._task_id), states.SUCCESS)
 
-    def tasklet(self, task, predecessors=[]):
+    def tasklet(self, task, predecessors=None):
+        if predecessors is None:
+            predecessors = []
         return TaskHandler(self, task, predecessors)    # here task is a class inherited from BaskTask
 
 
 def join(*handlers):
-    for handler in handlers:
-        handler.blocked = True
-
     for handler in handlers:
         handler.join()

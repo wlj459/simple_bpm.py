@@ -13,6 +13,29 @@ from .base import BaseTaskBackend
 from ..utils import generate_salt
 
 
+class IncrementalInterval(object):
+
+    def __init__(self, start=10, stop=60, step=10):
+        self.start = start
+        self.stop = stop
+        self.step = step
+
+        self.count = 0
+
+    def next(self):
+        self.count += 1
+        if hasattr(self, 'last'):
+            interval = self.last + self.step
+        else:
+            interval = self.start
+
+        if interval > self.stop:
+            interval = self.stop
+
+        self.last = interval
+        return interval
+
+
 class BaseComponent(BaseTaskBackend):
     """
         组件类需要继承此类
@@ -36,33 +59,11 @@ class BaseComponent(BaseTaskBackend):
         """
         raise NotImplementedError
 
-    def scheduler(self, algorithm=None,*args, **kwargs):
-        """
-            组件开发者如果需要对异步接口进行同步的话，可以使用该方法，
-            这个方法会调用用户传递的一个处理方法来进行
-
-            e.g:
-            def on_schedule():
-                result = async__peek()
-                if result['return'] == 0:
-                    self.callback(result)
-                elif result['return'] = 3:
-                    self.errback(result)
-
-            def start():
-                # do something
-                self.sid = async_api_call()
-                self.algorithm_init(init_countdown=10)
-                self.algorithm = simple_schedule_algorithm
-                scheduler()
-        """
-
-        # delay
-        #
-        if algorithm is None:
-            self.algorithm = self.simple_schedule_algorithm
+    def scheduler(self, interval=None):
+        if interval is None:
+            self._interval = IncrementalInterval()
         else:
-            self.algorithm = algorithm
+            self._interval = interval
         self._schedule()
 
     def algorithm_init(self, init_countdown=0, step=0, count=1):
@@ -70,21 +71,18 @@ class BaseComponent(BaseTaskBackend):
         self.step = step
         self.schedule_count = count
 
-    def _schedule(self, *args, **kwargs):
-        return False
-        if self.callback_flag:
-            return False
-
-        try:
-            task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance
-        except Task.DoesNotExist:
-            pass  # TODO
-        else:
-            self.algorithm()
-            self._register(stackless.tasklet(self.on_schedule)(*args, **kwargs),
-                           task.name)
-            task.transit_lazy(states.READY, countdown=self.countdown)
-            self.schedule_count += 1
+    def _schedule(self):
+        if not self.callback_flag and hasattr(self, '_interval'):
+            print '##########' * 40
+            try:
+                task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance
+            except Task.DoesNotExist:
+                pass  # TODO
+            else:
+                self._register(stackless.tasklet(self.on_schedule)(),
+                               task.name)
+                task.transit_lazy(states.READY)
+                self.schedule_count += 1
 
         return False
 

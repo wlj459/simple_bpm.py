@@ -157,9 +157,8 @@ class Task(models.Model):
         else:
             return self.__class__.objects.transit(self, to_state, **kwargs)
 
-    def transit_lazy(self, to_state, countdown=0, **kwargs):
+    def transit_lazy(self, to_state, countdown=10):
         signals.lazy_transit.send(sender=self.__class__,
                                   task_id=self.pk,
                                   to_state=to_state,
-                                  countdown=countdown,
-                                  **kwargs)
+                                  countdown=countdown)
