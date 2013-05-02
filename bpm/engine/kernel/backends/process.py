@@ -31,8 +31,6 @@ class TaskHandler(object):
         self.token_code = generate_salt()
         self.process._register(self, self.task_name, obj_type='handler')
 
-        self.blocked = False
-
     def __call__(self, *args, **kwargs):
         self.process._register(stackless.tasklet(self.handle)(*args, **kwargs),
                                self.task_name)
@@ -80,13 +78,11 @@ class TaskHandler(object):
             pass
 
     def join(self):
-        self.blocked = True
         task = self.instance()
         while not task or task.state not in states.ARCHIVE_STATES:
             stackless.schedule()
             task = self.instance()
 
-        self.blocked = False
         return task
 
     def read(self):
@@ -103,46 +99,35 @@ class BaseProcess(BaseTaskBackend):
         self._handler_registry = {}
 
     def _schedule(self):
-        alive_tasklet_count = 0
-        for tasklet, name in self._tasklet_registry.iteritems():
-            if tasklet.alive:
-                if name != self._task_name:
-                    alive_tasklet_count += 1
-
-        blocked_handler_count = 0
         archived_handler_count = 0
-        unhandled_handler_count = 0
+        blocked_handler_count = 0
         for handler, name in self._handler_registry.iteritems():
-            if handler.blocked:
-                blocked_handler_count += 1
             instance = handler.instance()
             if instance:
                 if instance.state in states.ARCHIVE_STATES:
                     archived_handler_count += 1
             else:
-                unhandled_handler_count += 1
+                blocked_handler_count += 1
 
-        tips = """\n
-alive_tasklet_count:        %(alive_tasklet_count)s
-blocked_handler_count:      %(blocked_handler_count)s
-archived_handler_count:     %(archived_handler_count)s
-unhandled_handler_count:    %(unhandled_handler_count)s
-        \n""" % locals()
-
-        print tips
-
-        # if unhandled_handler_count:
-        #     if hasattr(self, 'handle_unhandled_flag'):
-        #         return False
-        #     else:
-        #         setattr(self, 'handle_unhandled_flag', True)
-        #         return True
-
-        if alive_tasklet_count > blocked_handler_count:
+        if hasattr(self, 'archived_handler_count'):
+            if archived_handler_count != self.archived_handler_count:
+                self.archived_handler_count = archived_handler_count
+                return True
+        else:
+            setattr(self, 'archived_handler_count', 0)
             return True
 
-        if not alive_tasklet_count and not blocked_handler_count and archived_handler_count == len(self._handler_registry):
-            Task.objects.transit(Task.objects.get(pk=self._task_id), states.SUCCESS)
+        alive_tasklet_count = 0
+        for tasklet, name in self._tasklet_registry.iteritems():
+            if tasklet.alive:
+                alive_tasklet_count += 1
+
+        if not alive_tasklet_count and \
+                not blocked_handler_count and \
+                archived_handler_count == len(self._handler_registry):
+            Task.objects.transit(Task.objects.get(pk=self._task_id),
+                                 states.SUCCESS)
+
 
     def tasklet(self, task, predecessors=None):
         if predecessors is None:
@@ -151,8 +136,5 @@ unhandled_handler_count:    %(unhandled_handler_count)s
 
 
 def join(*handlers):
-    for handler in handlers:
-        handler.blocked = True
-
     for handler in handlers:
         handler.join()
