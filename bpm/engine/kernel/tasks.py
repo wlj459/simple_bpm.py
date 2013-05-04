@@ -3,8 +3,9 @@ import celery
 import cPickle as pickle
 import stackless
 
-from . import execution, signals, states, utils
+from . import execution, signals, states
 from .models import Task
+from .serialization import Serialization
 
 
 @celery.task(ignore_result=True)
@@ -33,7 +34,7 @@ def schedule(task_id):
                 globals().update(executor.locals())
                 cls = globals()[task.name]
 
-                with utils.PickleHelper(executor.locals().values()):
+                with Serialization(executor.locals().values()):
                     backend = pickle.loads(str(task.archive))
                     backend._resume()
 
@@ -69,7 +70,7 @@ def initiate(task_id):
                 kwargs = json.loads(task.kwargs)
 
             backend._initiate(*args, **kwargs)
-            with utils.PickleHelper(executor.locals().values()):
+            with Serialization(executor.locals().values()):
                 task.transit(states.READY, archive=pickle.dumps(backend))
             backend._destroy()
 
