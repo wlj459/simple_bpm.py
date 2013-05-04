@@ -21,7 +21,7 @@ class TaskHandler(object):
     """
     def __init__(self, process, name, predecessors=None):
         self.process = process
-        self.task_name = name
+        self.task_name = name.replace('bpm.test.', '')
 
         if predecessors is None:
             predecessors = []
@@ -130,9 +130,10 @@ class BaseProcess(BaseTaskBackend):
 
 
     def tasklet(self, task, predecessors=None):
+        assert issubclass(task, BaseTaskBackend)
         if predecessors is None:
             predecessors = []
-        return TaskHandler(self, task, predecessors)    # here task is a class inherited from BaskTask
+        return TaskHandler(self, '%s.%s' % (task.__module__, task.__name__), predecessors)    # here task is a class inherited from BaskTask
 
 
 def join(*handlers):

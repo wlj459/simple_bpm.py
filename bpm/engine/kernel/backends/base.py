@@ -26,7 +26,7 @@ class BaseTaskBackend(object):
         except Task.DoesNotExist:
             pass    # TODO
         else:
-            self._register(stackless.tasklet(self._start)(*args, **kwargs),
+            self._register(stackless.tasklet(self.start)(*args, **kwargs),
                            task.name)
 
     def _register(self, obj, task_name, obj_type='tasklet'):
@@ -38,9 +38,6 @@ class BaseTaskBackend(object):
         registry = getattr(self, '_%s_registry' % obj_type)
         if isinstance(registry, dict):
             registry[obj] = task_name       # 将tasklet作为key(保证唯一性)
-
-    def _start(self, *args, **kwargs):
-        self.start(*args, **kwargs)
 
     def _resume(self):
         for tasklet in self._tasklet_registry:  # 对于 _resume方法而言, 处理的就是 _tasklet_registry里面的东西

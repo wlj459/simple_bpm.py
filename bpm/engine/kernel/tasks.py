@@ -30,9 +30,10 @@ def schedule(task_id):
         if task.transit(states.RUNNING):
             executor = execution.Executor(task)
             if executor.execute():
-                cls = executor.get_definition()
+                globals().update(executor.locals())
+                cls = globals()[task.name]
 
-                with utils.PickleHelper(cls):
+                with utils.PickleHelper(executor.locals().values()):
                     backend = pickle.loads(str(task.archive))
                     backend._resume()
 
@@ -54,7 +55,8 @@ def initiate(task_id):
     else:
         executor = execution.Executor(task)
         if executor.execute():
-            cls = executor.get_definition()
+            locals().update(executor.locals())
+            cls = locals()[task.name]
 
             backend = cls(task.pk, task.name)
 
@@ -67,7 +69,7 @@ def initiate(task_id):
                 kwargs = json.loads(task.kwargs)
 
             backend._initiate(*args, **kwargs)
-            with utils.PickleHelper(cls):
+            with utils.PickleHelper(executor.locals().values()):
                 task.transit(states.READY, archive=pickle.dumps(backend))
             backend._destroy()
 

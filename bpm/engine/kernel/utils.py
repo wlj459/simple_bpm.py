@@ -5,43 +5,46 @@ import types
 
 class PickleHelper(object):
 
-    def __init__(self, cls):
-        self.cls = cls
+    def __init__(self, classes):
+        self.classes = {}
+        for cls in classes:
+            self.classes[cls] = cls.__module__
 
-        cls_module = getattr(cls, '__module__', '')
-        cls_name = getattr(cls, '__name__')
-        self.abspath = '.'.join(
-            [cls_module, cls_name] if cls_module else [cls_name])
-
-        self._original_modules = {}
-        self._target_modules = {}
+        self._target_modules = []
 
     def __enter__(self):
-        paths = self.abspath.split('.')
-        targets = map(lambda i: ('.'.join(paths[:-i - 1]),
-                                 paths[-i - 1]),
-                      range(len(paths) - 1))
+        modules = []
+        for module_name in set(self.classes.values()):
+            splits = module_name.split('.')
+            for i in range(len(splits)):
+                if i:
+                    modules.append('.'.join(splits[:-i]))
+                else:
+                    modules.append('.'.join(splits[:]))
 
-        obj = self.cls
-        for module_name, obj_name in targets:
-            if module_name in sys.modules:
-                self._original_modules[module_name] = sys.modules[module_name]
+        for module_name in set(modules):
+            if not module_name in sys.modules:
+                self._target_modules.append(module_name)
 
-            module = types.ModuleType(module_name)
-            setattr(module, obj_name, obj)
+        for cls, module_name in self.classes.iteritems():
+            attr = cls.__name__
+            obj = cls
+            splits = module_name.split('.')
+            for i in range(len(splits)):
+                if i:
+                    module_name = '.'.join(splits[:-i])
+                else:
+                    module_name = '.'.join(splits[:])
 
-            sys.modules[module_name] = module
-            self._target_modules[module_name] = module
+                mod = sys.modules.setdefault(module_name, types.ModuleType(module_name))
+                mod.__dict__.setdefault(attr, obj)
 
-            obj = module
+                attr = splits[-i - 1]
+                obj = mod
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for k, v in self._target_modules.iteritems():
-            if v == sys.modules.get(k):
-                del sys.modules[k]
-
-        for k, v in self._original_modules.iteritems():
-            sys.modules[k] = v
+        for module_name in self._target_modules:
+            del sys.modules[module_name]
 
 
 def generate_salt(length=6):
