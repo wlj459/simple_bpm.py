@@ -7,8 +7,27 @@ from django.db import models, transaction
 from . import signals, states, utils
 
 
+class Deploy(models.Model):
+
+    name = models.CharField(
+        max_length=255,
+    )
+    text = models.TextField()
+
+    def __unicode__(self):
+        return unicode("[#%d] %s" % (
+            self.id,
+            self.name
+        ))
+
+
 class Definition(models.Model):
 
+    module = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+    )
     name = models.SlugField(
         max_length=100,
     )
@@ -18,10 +37,16 @@ class Definition(models.Model):
             (1, 'COMPONENT'),
         )
     )
-    text = models.TextField()
+    deploy = models.ForeignKey(Deploy)
+
+    class Meta:
+        unique_together = ('module', 'name')
 
     def __unicode__(self):
-        return self.name
+        return unicode("%s.%s" % (
+            self.module,
+            self.name,
+        ))
 
 
 class TaskManager(models.Manager):
@@ -120,7 +145,10 @@ class Task(models.Model):
     objects = TaskManager()
 
     def __unicode__(self):
-        return self.name
+        return unicode("[#%d] %s" % (
+            self.id,
+            self.name
+        ))
 
     def appoint(self, to_state):
         if to_state in states.APPOINTMENT_STATES:

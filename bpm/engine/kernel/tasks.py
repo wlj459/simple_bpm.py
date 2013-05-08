@@ -31,8 +31,8 @@ def schedule(task_id):
         if task.transit(states.RUNNING):
             executor = execution.Executor(task)
             if executor.execute():
-                globals().update(executor.locals())
-                cls = globals()[task.name]
+                locals().update(executor.locals())
+                cls = locals()[task.name.split('.')[-1]]
 
                 with Serialization(executor.locals().values()):
                     backend = pickle.loads(str(task.archive))
@@ -57,7 +57,7 @@ def initiate(task_id):
         executor = execution.Executor(task)
         if executor.execute():
             locals().update(executor.locals())
-            cls = locals()[task.name]
+            cls = locals()[task.name.split('.')[-1]]
 
             backend = cls(task.pk, task.name)
 

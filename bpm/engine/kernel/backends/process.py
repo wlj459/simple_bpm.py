@@ -21,7 +21,7 @@ class TaskHandler(object):
     """
     def __init__(self, process, name, predecessors=None):
         self.process = process
-        self.task_name = name.replace('bpm.test.', '')
+        self.task_name = name
 
         if predecessors is None:
             predecessors = []

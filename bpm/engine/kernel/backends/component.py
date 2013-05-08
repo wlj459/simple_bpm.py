@@ -73,7 +73,7 @@ class BaseComponent(BaseTaskBackend):
 
     def _schedule(self):
         if not self.callback_flag and hasattr(self, '_interval'):
-            print '##########' * 40
+            print '#' * 40
             try:
                 task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance
             except Task.DoesNotExist:
