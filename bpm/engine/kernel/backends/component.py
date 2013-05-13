@@ -7,6 +7,7 @@ import json
 import stackless
 
 from .. import signals, states
+import types
 from django.db import transaction
 from ..models import Task
 from .base import BaseTaskBackend
@@ -59,11 +60,20 @@ class BaseComponent(BaseTaskBackend):
         """
         raise NotImplementedError
 
-    def scheduler(self, interval=None):
-        if interval is None:
-            self._interval = IncrementalInterval()
-        else:
-            self._interval = interval
+    def set_default_scheduler(self, on_schedule):
+        assert isinstance(on_schedule, types.MethodType)
+        assert self is getattr(on_schedule, 'im_self')
+
+        self._interval = IncrementalInterval()
+        self.on_schedule = on_schedule
+        self._schedule()
+
+    def set_scheduler(self, on_schedule, interval):
+        assert isinstance(on_schedule, types.MethodType)
+        assert self is getattr(on_schedule, 'im_self')
+
+        self._interval = interval
+        self.on_schedule = on_schedule
         self._schedule()
 
     def algorithm_init(self, init_countdown=0, step=0, count=1):
