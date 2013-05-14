@@ -54,7 +54,7 @@ def initiate(task_id):
     except Task.DoesNotExist:
         pass
     else:
-        executor = execution.Executor(task)
+        executor = execution.TaskExecutor(task)
         if executor.execute():
             locals().update(executor.locals())
             cls = locals()[task.name.split('.')[-1]]
