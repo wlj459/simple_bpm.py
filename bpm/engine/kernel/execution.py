@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
+import imp
 import types
 from RestrictedPython import compile_restricted
 from RestrictedPython.Guards import full_write_guard, safe_builtins
 from django.conf import settings
-import imp
 from mercurial import hg, ui
 from mercurial.error import RepoError, RepoLookupError, ManifestLookupError
 
 from . import features
-from .models import Definition
+from .log import BPMLogger
 
 _CACHE_KEY = '__modules__'
 _ERR_MSG0 = 'No module named {!r}'
@@ -66,13 +66,13 @@ def mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1)
     revision = 'tip'
     _globals.setdefault(_CACHE_KEY, {})
     for module_name in _path_split(name):
-        print module_name
+        # print module_name
         # 首先检查缓存
         if module_name in _globals[_CACHE_KEY]:
             module = _globals[_CACHE_KEY][module_name]
         else:  # 缓存中没找到，则尝试加载模块
             for path in _guess_path(module_name):
-                print path
+                # print path
                 try:
                     fctx = repo[revision][path]
                 except RepoLookupError:
@@ -91,41 +91,41 @@ def mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1)
             else:
                 raise ImportError(_ERR_MSG0.format(module_name))
 
-    print _globals[_CACHE_KEY]
+    # print _globals[_CACHE_KEY]
     # 返回最后一个载入的模块
     return _globals[_CACHE_KEY][name]
 
 
-def internal_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
-    _globals = {} if _globals is None else _globals
-    _locals = {} if _locals is None else _locals
-    fromlist = [] if fromlist is None else fromlist
-
-    if fromlist:
-        line = 'from %s import %s' % (name, ', '.join(fromlist))
-    else:
-        line = 'import %s' % name
-
-    print '[internal_import] %s' % line
-
-    module = types.ModuleType(name)
-    for definition_name in fromlist:
-        try:
-            definition = Definition.objects.get(
-                module=name,
-                name=definition_name)
-        except Definition.DoesNotExist:
-            pass
-        else:
-            executor = _Executor(definition)
-            if executor.execute():
-                locals().update(executor.locals())
-                setattr(module, definition.name, locals()[definition.name])
-                continue
-
-        raise ImportError("cannot import name %s" % definition_name)
-
-    return module
+# def internal_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
+#     _globals = {} if _globals is None else _globals
+#     _locals = {} if _locals is None else _locals
+#     fromlist = [] if fromlist is None else fromlist
+#
+#     if fromlist:
+#         line = 'from %s import %s' % (name, ', '.join(fromlist))
+#     else:
+#         line = 'import %s' % name
+#
+#     print '[internal_import] %s' % line
+#
+#     module = types.ModuleType(name)
+#     for definition_name in fromlist:
+#         try:
+#             definition = Definition.objects.get(
+#                 module=name,
+#                 name=definition_name)
+#         except Definition.DoesNotExist:
+#             pass
+#         else:
+#             executor = _Executor(definition)
+#             if executor.execute():
+#                 locals().update(executor.locals())
+#                 setattr(module, definition.name, locals()[definition.name])
+#                 continue
+#
+#         raise ImportError("cannot import name %s" % definition_name)
+#
+#     return module
 
 
 def original_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
@@ -140,13 +140,20 @@ def original_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
 
     print '[original_import] %s' % line
 
-    return __import__(name, _globals, _locals, fromlist, level)
+    return __import__(name, _globals, _locals, fromlist)
 
 
 def default_guarded_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
     _globals = {} if _globals is None else _globals
     _locals = {} if _locals is None else _locals
     fromlist = [] if fromlist is None else fromlist
+
+    if fromlist:
+        line = 'from %s import %s' % (name, ', '.join(fromlist))
+    else:
+        line = 'import %s' % name
+
+    print '[default_guarded_import] %s' % line
 
     __feature__ = _globals.setdefault('__feature__')
     if __feature__ and features.INTERNAL_IMPORT in __feature__:
@@ -196,6 +203,7 @@ class BaseExecutor(object):
         self.__globals['_getattr_'] = default_guarded_getattr
         self.__globals['_getitem_'] = default_guarded_getitem
         self.__globals['_write_'] = default_guarded_write
+        self.__globals['_print_'] = BPMLogger
 
         try:
             code = compile_restricted(
@@ -223,29 +231,29 @@ class BaseExecutor(object):
             return self.__locals
 
 
-class Executor(object):
-
-    def __init__(self, task, *args, **kwargs):
-        self.task = task
-
-        splits = self.task.name.split('.')
-        self.module_name = '.'.join(splits[:-1])
-        self.object_name = splits[-1]
-
-    def execute(self):
-        try:
-            definition = Definition.objects.get(
-                module=self.module_name,
-                name=self.object_name)
-        except Definition.DoesNotExist:
-            return False
-        else:
-            self.executor = _Executor(definition)
-            return self.executor.execute()
-
-    def locals(self):
-        if hasattr(self, 'executor'):
-            return self.executor.locals()
+# class Executor(object):
+#
+#     def __init__(self, task, *args, **kwargs):
+#         self.task = task
+#
+#         splits = self.task.name.split('.')
+#         self.module_name = '.'.join(splits[:-1])
+#         self.object_name = splits[-1]
+#
+#     def execute(self):
+#         try:
+#             definition = Definition.objects.get(
+#                 module=self.module_name,
+#                 name=self.object_name)
+#         except Definition.DoesNotExist:
+#             return False
+#         else:
+#             self.executor = _Executor(definition)
+#             return self.executor.execute()
+#
+#     def locals(self):
+#         if hasattr(self, 'executor'):
+#             return self.executor.locals()
 
 
 class TaskExecutor(object):
@@ -264,7 +272,7 @@ class TaskExecutor(object):
             repo = hg.repository(ui.ui(), '%s/%s/' % (settings.REPO_ROOT, self.repo_name))
         except RepoError:
             # TODO: 错误处理
-            print 0
+            print 'Repository {!r} not found.'.format(self.repo_name)
             return False
 
         for module_name in _path_split(self.module_name):
@@ -273,10 +281,10 @@ class TaskExecutor(object):
                     fctx = repo[self.revision][path]
                 except RepoLookupError:
                     # TODO: 做一些错误记录
-                    print 1
+                    print 'RepoLookupError'
                     pass
                 except ManifestLookupError:
-                    print 2
+                    print 'ManifestLookupError'
                     pass
                 else:
                     executor = BaseExecutor(module_name, fctx.data())
@@ -290,9 +298,9 @@ class TaskExecutor(object):
             try:
                 fctx = repo[self.revision][path]
             except RepoLookupError:
-                print 4
+                print 'RepoLookupError'
             except ManifestLookupError:
-                print 5
+                print 'ManifestLookupError'
             else:
                 self.executor = BaseExecutor(self.module_name, fctx.data())
                 return self.executor.execute()

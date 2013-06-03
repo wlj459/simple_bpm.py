@@ -37,23 +37,10 @@ class TaskHandler(object):
         return self
 
     def handle(self, *args, **kwargs):
-        print "#" * 40
-        print "HANDLE"
-        print "#" * 40
         if self.predecessors:
             join(*self.predecessors)
 
-        cleaned_args = []
-        for arg in args:
-            if isinstance(arg, self.__class__):
-                arg = arg.read()
-            cleaned_args.append(arg)
-
-        cleaned_kwargs = {}
-        for k, v in kwargs.iteritems():
-            if isinstance(v, self.__class__):
-                v = v.read()
-            cleaned_kwargs[k] = v
+        cleaned_args, cleaned_kwargs = clean(*args, **kwargs)
 
         try:
             parent = Task.objects.get(pk=self.process._task_id)
@@ -69,8 +56,8 @@ class TaskHandler(object):
                         ttl=parent.ttl + 1)
             task.save()
 
-    @transaction.commit_on_success()    # 需要在一个事务中完成，否则可能出现幻读
-    def instance(self):
+    @transaction.commit_on_success()  # Important !
+    def model_object(self):
         try:
             return Task.objects.get(identifier_code=self.identifier_code,
                                     token_code=self.token_code)
@@ -78,17 +65,17 @@ class TaskHandler(object):
             pass
 
     def join(self):
-        task = self.instance()
-        while not task or task.state not in states.ARCHIVE_STATES:
+        model_object = self.model_object()
+        while not model_object or model_object.state not in states.ARCHIVE_STATES:
             stackless.schedule()
-            task = self.instance()
+            model_object = self.model_object()
 
-        return task
+        return model_object
 
     def read(self):
-        task = self.join()
-        if task.data:
-            return json.loads(task.data)
+        model_object = self.join()
+        if model_object.data:
+            return json.loads(model_object.data)
 
 
 class BaseProcess(BaseTaskBackend):
@@ -102,9 +89,9 @@ class BaseProcess(BaseTaskBackend):
         archived_handler_count = 0
         blocked_handler_count = 0
         for handler, name in self._handler_registry.iteritems():
-            instance = handler.instance()
-            if instance:
-                if instance.state in states.ARCHIVE_STATES:
+            model_object = handler.model_object()
+            if model_object is not None:
+                if model_object.state in states.ARCHIVE_STATES:
                     archived_handler_count += 1
             else:
                 blocked_handler_count += 1
@@ -125,15 +112,36 @@ class BaseProcess(BaseTaskBackend):
         if not alive_tasklet_count and \
                 not blocked_handler_count and \
                 archived_handler_count == len(self._handler_registry):
-            Task.objects.transit(Task.objects.get(pk=self._task_id),
-                                 states.SUCCESS)
+            self.complete()
 
+    def complete(self, *args, **kwargs):
+        model_object = self._model_object()
+        if model_object is not None:
+            cleaned_args, cleaned_kwargs = clean(*args, **kwargs)
+            model_object.complete(*cleaned_args, **cleaned_kwargs)
 
     def tasklet(self, task, predecessors=None):
         assert issubclass(task, BaseTaskBackend)
         if predecessors is None:
             predecessors = []
         return TaskHandler(self, '%s.%s' % (task.__module__, task.__name__), predecessors)    # here task is a class inherited from BaskTask
+
+
+def clean(*args, **kwargs):
+
+    cleaned_args = []
+    for arg in args:
+        if isinstance(arg, TaskHandler):
+            arg = arg.read()
+        cleaned_args.append(arg)
+
+    cleaned_kwargs = {}
+    for k, v in kwargs.iteritems():
+        if isinstance(v, TaskHandler):
+            v = v.read()
+        cleaned_kwargs[k] = v
+
+    return cleaned_args, cleaned_kwargs
 
 
 def join(*handlers):

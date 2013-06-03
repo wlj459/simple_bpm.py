@@ -7,49 +7,87 @@ from django.db import models, transaction
 from . import signals, states, utils
 
 
-class Deploy(models.Model):
-
-    name = models.CharField(
-        max_length=255,
-    )
-    text = models.TextField()
-
-    def __unicode__(self):
-        return unicode("[#%d] %s" % (
-            self.id,
-            self.name
-        ))
-
-
-class Definition(models.Model):
-
-    module = models.CharField(
-        max_length=255,
-        blank=True,
-        default='',
-    )
-    name = models.SlugField(
-        max_length=100,
-    )
-    category = models.PositiveSmallIntegerField(
-        choices=(
-            (0, 'PROCESS'),
-            (1, 'COMPONENT'),
-        )
-    )
-    deploy = models.ForeignKey(Deploy)
-
-    class Meta:
-        unique_together = ('module', 'name')
-
-    def __unicode__(self):
-        return unicode("%s.%s" % (
-            self.module,
-            self.name,
-        ))
+# class Repository(models.Model):
+#
+#     name = models.SlugField(
+#         max_length=30,
+#         unique=True,
+#     )
+#
+#     def __unicode__(self):
+#         return self.name
+#
+#
+# class Release(models.Model):
+#
+#     repo = models.ForeignKey(Repository)
+#     change_id = models.SlugField(max_length=12)
+#     state = models.CharField(
+#         choices=(
+#             ('DEVELOPMENT', 'DEVELOPMENT'),
+#             ('STABLE', 'STABLE'),
+#         )
+#     )
+#     dependencies =
+#     is_recommended = models.NullBooleanField()
+#
+#     class Meta:
+#         unique_together = (
+#             ('repo', 'change_id'),
+#             ('repo', 'is_recommended'),
+#         )
 
 
 class TaskManager(models.Manager):
+
+    def retry(self, instance, args=None, kwargs=None):
+        assert isinstance(instance, self.model)
+        assert instance.identifier_code
+        assert instance.token_code
+
+        if instance.state == states.FAILURE:
+            identifier_code = instance.identifier_code
+            token_code = instance.token_code
+
+            if args is None:
+                args = instance.args
+            else:
+                args = json.dumps(args)
+
+            if kwargs is None:
+                kwargs = instance.kwargs
+            else:
+                kwargs = json.dumps(kwargs)
+
+            with transaction.commit_on_success():
+                Task.objects.filter(pk=instance.pk)\
+                            .update(token_code=None)
+                task = Task(name=instance.name,
+                            parent=instance.parent,
+                            args=args,
+                            kwargs=kwargs,
+                            identifier_code=identifier_code,
+                            token_code=token_code).save()
+
+            return locals().get('task')
+
+    def start(self, name, args=None, kwargs=None):
+        if args is None:
+            args = []
+        else:
+            assert isinstance(args, (list, tuple))
+
+        if kwargs is None:
+            kwargs = {}
+        else:
+            assert isinstance(kwargs, dict)
+
+        task = Task(name=name,
+                    args=json.dumps(args),
+                    kwargs=json.dumps(kwargs))
+        task.save()
+
+        return task
 
     def transit(self, instance, to_state, **kwargs):
         assert isinstance(instance, self.model)
@@ -107,10 +145,19 @@ class Task(models.Model):
     )
 
     # inputs and outputs
-    args = models.TextField()
-    kwargs = models.TextField()
+    args = models.TextField(
+        blank=True,
+    )
+    kwargs = models.TextField(
+        blank=True,
+    )
+
     data = models.TextField()
     ex_data = models.TextField()
+    return_code = models.IntegerField(
+        blank=True,
+        null=True,
+    )
 
     state = models.CharField(
         max_length=16,
@@ -126,9 +173,11 @@ class Task(models.Model):
 
     identifier_code = models.SlugField(
         max_length=6,
+        null=True,
     )
     token_code = models.SlugField(
         max_length=6,
+        null=True,
     )
     archive = models.TextField()
     ack = models.PositiveSmallIntegerField(
@@ -144,6 +193,9 @@ class Task(models.Model):
 
     objects = TaskManager()
 
+    class Meta:
+        unique_together = ('identifier_code', 'token_code')
+
     def __unicode__(self):
         return unicode("[#%d] %s" % (
             self.id,
@@ -154,26 +206,23 @@ class Task(models.Model):
         if to_state in states.APPOINTMENT_STATES:
             return self.transit(to_state, appointment=True)
 
-    def _callback(self, data='', ex_data='', return_code=0):
+    def complete(self, data=None, ex_data=None, return_code=0):
         if self.state == states.RUNNING:
-            kwargs = {}
-            to_state = states.FAILURE
+            kwargs = {
+                'return_code': return_code,
+            }
+
+            if data is not None:
+                kwargs['data'] = json.dumps(data)
+            if ex_data is not None:
+                kwargs['ex_data'] = json.dumps(ex_data)
 
             if return_code:
-                kwargs['data'] = json.dumps(return_code)
-                kwargs['ex_data'] = json.dumps(ex_data)
+                to_state = states.FAILURE
             else:
-                kwargs['data'] = json.dumps(data)
                 to_state = states.SUCCESS
 
             self.transit(to_state, **kwargs)
-
-    def callback(self, data):
-        self._callback(data=data)
-
-    def errback(self, ex_data, return_code=1):
-        assert return_code != 0
-        self._callback(ex_data=ex_data, return_code=return_code)
 
     def transit(self, to_state, appointment=False, **kwargs):
         if appointment:

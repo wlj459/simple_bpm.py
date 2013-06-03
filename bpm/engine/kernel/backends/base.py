@@ -7,6 +7,7 @@ bpm.engine.kernel.backends.base
 Task backend base class.
 """
 import stackless
+from django.db import transaction
 
 from ..models import Task
 
@@ -28,6 +29,13 @@ class BaseTaskBackend(object):
         else:
             self._register(stackless.tasklet(self.start)(*args, **kwargs),
                            task.name)
+
+    @transaction.commit_on_success()  # Important !
+    def _model_object(self):
+        try:
+            return Task.objects.get(pk=self._task_id)
+        except Task.DoesNotExist:
+            pass
 
     def _register(self, obj, task_name, obj_type='tasklet'):
         """
