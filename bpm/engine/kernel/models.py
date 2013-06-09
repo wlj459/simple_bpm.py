@@ -207,7 +207,7 @@ class Task(models.Model):
             return self.transit(to_state, appointment=True)
 
     def complete(self, data=None, ex_data=None, return_code=0):
-        if self.state == states.RUNNING:
+        if self.state in (states.PENDING, states.RUNNING):
             kwargs = {
                 'return_code': return_code,
             }

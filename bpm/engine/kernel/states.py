@@ -92,7 +92,7 @@ class State(str):
 
 
 _TRANSITION = ConstantDict({
-    PENDING: frozenset([READY, REVOKED]),
+    PENDING: frozenset([READY, FAILURE, REVOKED]),
     READY: frozenset([RUNNING, REVOKED, SUSPENDED]),
     RUNNING: frozenset([BLOCKED, SUCCESS, FAILURE]),
     BLOCKED: frozenset([READY, REVOKED]),

@@ -26,6 +26,12 @@ class BaseComponent(BaseTaskBackend):
         self.schedule_count = 1
         self.completed = False
 
+    def __guarded_setattr__(self, key, value):
+        if not key.startswith('_'):
+            setattr(self, key, value)
+        else:
+            raise AttributeError, 'can not set _'
+
     def start(self, *args, **kwargs):
         """
         start方法需要组件开发者实现, 如cc接口调用， 如果没有设置self.enable_schedule=True，

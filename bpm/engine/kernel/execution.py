@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import imp
-import types
+import os
 from RestrictedPython import compile_restricted
 from RestrictedPython.Guards import full_write_guard, safe_builtins
 from django.conf import settings
@@ -196,6 +196,9 @@ class BaseExecutor(object):
         self.__locals = {}
         self.__succeeded = False
 
+        os.environ.setdefault('BPM_LOGGER_NAME', module_name)
+        os.environ.setdefault('BPM_LOGGER_REVISION', 'tip')
+
     def execute(self):
         self.__globals['__builtins__']['__import__'] = default_guarded_import
         self.__globals['__name__'] = self.module_name
@@ -315,7 +318,7 @@ class TaskExecutor(object):
 class WriteGuardWrapper(object):
 
     def __init__(self, obj):
-        self.obj = obj
+        self.__dict__['obj'] = obj
 
     def __len__(self):
         # Required for slices with negative bounds.
@@ -324,7 +327,7 @@ class WriteGuardWrapper(object):
     def __write_guard__(self, method_name, message, *args):
         try:
             method = getattr(self.obj, method_name)
-        except AssertionError:
+        except AttributeError:
             raise TypeError(message)
         method(*args)
 
