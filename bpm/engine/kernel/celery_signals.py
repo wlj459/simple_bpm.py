@@ -9,11 +9,14 @@ def task_sent(**kwargs):
 
 @signals.task_prerun.connect
 def task_prerun(*args, **kwargs):
-    print 'task_prerun'
+    from bpm.engine.kernel import modules
+    modules = {}
 
 @signals.task_postrun.connect
 def task_postrun(*args, **kwargs):
     print 'task_postrun'
+    from bpm.engine.kernel import modules
+    print modules
 
 @signals.task_success.connect
 def task_success(*args, **kwargs):

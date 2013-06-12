@@ -11,11 +11,14 @@ from mercurial.error import RepoError, RepoLookupError, ManifestLookupError
 from . import features
 from .log import BPMLogger
 
-_CACHE_KEY = '__modules__'
 _ERR_MSG0 = 'No module named {!r}'
 _ERR_MSG1 = 'cannot import name {!r}'
 
 default_guarded_getattr = getattr  # No restrictions.
+
+
+def default_guarded_getiter(obj):
+    return list(obj)
 
 
 def default_guarded_getitem(ob, index):
@@ -43,6 +46,47 @@ def _guess_path(module_name):
     return ('/'.join(splits + ['__init__.py']), '/'.join(splits) + '.py')
 
 
+def _call_with_frames_removed(f, *args, **kwargs):
+    return f(*args, **kwargs)
+
+
+def _find_module(name, package=None):
+    pass
+
+
+def _mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
+    _globals = {} if _globals is None else _globals
+    _locals = {} if _locals is None else _locals
+    fromlist = [] if fromlist is None else fromlist
+
+    if fromlist:
+        line = 'from %s import %s' % (name, ', '.join(fromlist))
+    else:
+        line = 'import %s' % name
+
+    print '[_mercurial_import] %s' % line
+
+    from bpm.engine.kernel import modules
+    parent = name.rpartition('.')[0]
+    if parent:
+        if parent not in modules:
+            _call_with_frames_removed(_mercurial_import, parent)
+        if name in modules:
+            return modules[name]
+
+    loader = _find_module(name)
+    if loader is None:
+        raise ImportError(_ERR_MSG0.format(name))
+    elif not name in modules:
+        loader.load_module(name)
+    module = modules[name]
+
+    if parent:
+        parent_module = modules[parent]
+        setattr(parent_module, name.rpartition('.')[2], module)
+    return module
+
+
 def mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
     _globals = {} if _globals is None else _globals
     _locals = {} if _locals is None else _locals
@@ -55,45 +99,51 @@ def mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1)
 
     print '[mercurial_import] %s' % line
 
-    # 首先尝试获取仓库
+    # 首先尝试获取仓库，如果仓库不存在，则模块一定不存在
     repo_name = name.split('.')[0]
+    print '[mercurial_import] try get repo %s' % repo_name
     try:
         repo = hg.repository(ui.ui(), '%s/%s/' % (settings.REPO_ROOT, repo_name))
     except RepoError:
         raise ImportError(_ERR_MSG0.format(repo_name))
 
-    # 然后尝试一级一级引入模块
-    revision = 'tip'
-    _globals.setdefault(_CACHE_KEY, {})
+    from bpm.engine.kernel import modules
+
     for module_name in _path_split(name):
-        # print module_name
-        # 首先检查缓存
-        if module_name in _globals[_CACHE_KEY]:
-            module = _globals[_CACHE_KEY][module_name]
-        else:  # 缓存中没找到，则尝试加载模块
-            for path in _guess_path(module_name):
-                # print path
-                try:
-                    fctx = repo[revision][path]
-                except RepoLookupError:
-                    # TODO: 做一些错误记录
-                    pass
-                except ManifestLookupError:
-                    pass
-                else:
-                    executor = BaseExecutor(module_name, fctx.data())
-                    if executor.execute():
-                        module = imp.new_module(module_name)
-                        for k, v in executor.locals().iteritems():
-                            setattr(module, k, v)
-                        _globals[_CACHE_KEY][module_name] = module
-                        break
+        print '[mercurial_import] try import module %s' % module_name
+        # 尝试从缓存获取
+        if module_name in modules:
+            print '[mercurial_import] get module %s from cache' % module_name
+            continue
+
+        # 找到仓库后，尝试一级一级加载模块
+        revision = 'tip'  # TODO
+        for path in _guess_path(module_name):
+            print '[mercurial_import] try load module %s from %s' % (module_name, path)
+            try:
+                fctx = repo[revision][path]
+            except RepoLookupError:
+                # TODO: 做一些错误记录
+                pass
+            except ManifestLookupError:
+                pass
             else:
-                raise ImportError(_ERR_MSG0.format(module_name))
+                print '[mercurial_import] load module %s from %s' % (module_name, path)
+                executor = BaseExecutor(module_name, fctx.data())
+                if executor.execute():
+                    module = imp.new_module(module_name)
+                    print executor.locals()
+                    for k, v in executor.locals().iteritems():
+                        setattr(module, k, v)
+                    modules.setdefault(module_name, module)
+                    break
+        else:
+            raise ImportError(_ERR_MSG0.format(module_name))
 
     # print _globals[_CACHE_KEY]
     # 返回最后一个载入的模块
-    return _globals[_CACHE_KEY][name]
+    print 'return %s' % name
+    return modules[name]
 
 
 # def internal_import(name, _globals=None, _locals=None, fromlist=None, level=-1):
@@ -207,6 +257,7 @@ class BaseExecutor(object):
         self.__globals['_getitem_'] = default_guarded_getitem
         self.__globals['_write_'] = default_guarded_write
         self.__globals['_print_'] = BPMLogger
+        self.__globals['_getiter_'] = default_guarded_getiter
 
         try:
             code = compile_restricted(
