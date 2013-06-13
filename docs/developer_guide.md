@@ -20,6 +20,7 @@ MercurialEclipse的安装及使用方法请参考网络上的教程。
 用户名/密码都是`admin`。
 - 任务查询：[http://t.ied.com/bpm/kernel/task/](http://t.ied.com/bpm/kernel/task/)
 - 日志查询：[http://t.ied.com/bpm/log/record/](http://t.ied.com/bpm/log/record/)
+
 #### Mercurial Web
 - 版本控制：[http://t.ied.com/hg/](http://t.ied.com/hg/)
 
