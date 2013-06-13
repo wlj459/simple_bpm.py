@@ -2,7 +2,8 @@ Developer's Guide
 =================
 
 *请多参考例子包*
-不同于现有调度系统__skewer__的组件开发方式，__bpm.py__抽象出了`Task`这一概念。一切可被bpm.py调度的对象皆是Task。所以，`Component`是一种Task，`Process`也是一种Task，并且将来会实现更多Task。
+
+不同于现有调度系统skewer的组件开发方式，bpm.py抽象出了`Task`这一概念。一切可被bpm.py调度的对象皆是Task。所以，`Component`是一种Task，`Process`也是一种Task，并且将来会实现更多Task。
 
 因为上面的缘故，bpm.py采用`Package`的方式管理Task。这里的Package就是Python的Package，因此，Package不仅仅可以管理Task，还可以管理任意Python代码。为了进行代码的版本控制，bpm.py使用[Mercurial](http://mercurial.selenic.com)，同时，为了对不同的Package进行隔离，每一个Package都有各自的仓库。
 > 在内网可通过[http://t.ied.com/hg/](http://t.ied.com/hg/)查看所有仓库。已经为组件开发建立仓库`bk`，并开通了读写权限，可使用Mercurial客户端`hg`或者[MercurialEclipse](http://mercurial.selenic.com/wiki/MercurialEclipse)访问。使用hg访问的例子如下：
