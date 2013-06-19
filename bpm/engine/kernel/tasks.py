@@ -84,13 +84,3 @@ def transit(task_id, to_state):
         pass
     else:
         Task.objects.transit(task, to_state)
-
-
-@celery.task(ignore_result=True)
-def svein():
-    import sys
-    import log
-    print sys.modules['logging']
-
-    logger = log.getLogger('bpm.example.process')
-    print logger

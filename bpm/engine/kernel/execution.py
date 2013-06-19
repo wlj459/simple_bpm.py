@@ -115,6 +115,9 @@ def mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1)
         if module_name in modules:
             print '[mercurial_import] get module %s from cache' % module_name
             continue
+        else:
+            module = imp.new_module(module_name)
+            modules[module_name] = module
 
         # 找到仓库后，尝试一级一级加载模块
         revision = 'tip'  # TODO
@@ -131,13 +134,11 @@ def mercurial_import(name, _globals=None, _locals=None, fromlist=None, level=-1)
                 print '[mercurial_import] load module %s from %s' % (module_name, path)
                 executor = BaseExecutor(module_name, fctx.data())
                 if executor.execute():
-                    module = imp.new_module(module_name)
-                    print executor.locals()
                     for k, v in executor.locals().iteritems():
                         setattr(module, k, v)
-                    modules.setdefault(module_name, module)
                     break
         else:
+            del modules[module_name]
             raise ImportError(_ERR_MSG0.format(module_name))
 
     # print _globals[_CACHE_KEY]
