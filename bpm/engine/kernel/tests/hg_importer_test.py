@@ -15,9 +15,9 @@ def simple_exec_hook(compiled_code, module_dict):
     exec (compiled_code, {}, module_dict)
 
 
-class ImportHookTest(TestCase):
+class HgImporterTest(TestCase):
     def setUp(self):
-        super(ImportHookTest, self).setUp()
+        super(HgImporterTest, self).setUp()
         self.OLD_REPO_ROOT = settings.REPO_ROOT
         settings.REPO_ROOT = os.path.join(os.path.dirname(__file__), 'hg_importer_test_repo_root')
         self.old_compile_hook = hg_importer.compile_hook
@@ -27,7 +27,7 @@ class ImportHookTest(TestCase):
         hg_importer.setUp()
 
     def tearDown(self):
-        super(ImportHookTest, self).tearDown()
+        super(HgImporterTest, self).tearDown()
         hg_importer.tearDown()
         settings.REPO_ROOT = self.OLD_REPO_ROOT
         hg_importer.compile_hook = self.old_compile_hook
@@ -52,5 +52,6 @@ class ImportHookTest(TestCase):
 
     def test_package_import_module(self):
         import complex_package
+
         self.assertEqual('world', complex_package.hello)
         self.assertEqual('world', complex_package.sub_package.hello)
