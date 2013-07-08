@@ -43,10 +43,14 @@ class ImportHookTest(TestCase):
         self.assertEqual('world', simple_package.hello)
 
     def test_simple_module(self):
-        import simple_package
         import simple_package.simple_module
 
         self.assertFalse(hasattr(simple_package.simple_module, '__path__'))
         self.assertEqual('simple_package.simple_module', simple_package.simple_module.__name__)
         self.assertEqual('simple_package', simple_package.simple_module.__package__)
         self.assertEqual('world', simple_package.simple_module.hello)
+
+    def test_package_import_module(self):
+        import complex_package
+        self.assertEqual('world', complex_package.hello)
+        self.assertEqual('world', complex_package.sub_package.hello)

@@ -30,26 +30,40 @@ def tearDown():
 
 def path_hook(path):
     if MERCURIAL_SYS_PATH == path:
-        return Finder()
+        return HgFinder()
     else:
         raise ImportError()
 
 
-class Finder(object):
+class HgFinder(object):
+    def __init__(self):
+        self.loader_stack = []
+
     def find_module(self, fullname, path=None):
         # print('find_module', fullname, path)
         repo_name = fullname.partition('.')[0]
+        if self.loader_stack:
+            current_loader = self.loader_stack[-1]
+            if current_loader.can_load(fullname):
+                return current_loader
         try:
             repo = mercurial.hg.repository(mercurial.ui.ui(), '%s/%s/' % (settings.REPO_ROOT, repo_name))
             LOGGER.info('import %s is found as hg repo' % repo_name)
-            return Loader(repo)
+            return HgLoader(self, repo)
         except mercurial.error.RepoError:
             LOGGER.debug('import %s not found as hg repo' % repo_name)
             return None
 
+    def push_loader(self, loader):
+        self.loader_stack.append(loader)
 
-class Loader(object):
-    def __init__(self, repo):
+    def pop_loader(self):
+        return self.loader_stack.pop()
+
+
+class HgLoader(object):
+    def __init__(self, finder, repo):
+        self.finder = finder
         self.repo = repo
         self.revision = repo['tip']
 
@@ -65,7 +79,11 @@ class Loader(object):
         else:
             mod.__package__ = fullname.rpartition('.')[0]
         compiled_code = self.get_code(fullname)
-        exec_hook(compiled_code, mod.__dict__)
+        try:
+            self.finder.push_loader(SubModuleLoader(self, fullname))
+            exec_hook(compiled_code, mod.__dict__)
+        finally:
+            self.finder.pop_loader()
         return mod
 
     def get_code(self, fullname):
@@ -76,6 +94,13 @@ class Loader(object):
 
     def get_source(self, fullname):
         return self._get_source(fullname)[1]
+
+    def can_load(self, fullname):
+        try:
+            self._get_source(fullname)
+            return True
+        except ImportError:
+            return False
 
     def _get_source(self, fullname):
         try:
@@ -99,3 +124,27 @@ class Loader(object):
         except mercurial.error.ManifestLookupError as e:
             raise IOError('adapted from ManifestLookupError: %s' % e)
 
+
+class SubModuleLoader(object):
+    def __init__(self, loader, parent):
+        self.loader = loader
+        self.parent = parent
+
+
+    def load_module(self, fullname):
+        return self.loader.load_module('%s.%s' % (self.parent, fullname))
+
+    def get_code(self, fullname):
+        return self.loader.get_code('%s.%s' % (self.parent, fullname))
+
+    def is_package(self, fullname):
+        return self.loader.is_package('%s.%s' % (self.parent, fullname))
+
+    def get_source(self, fullname):
+        return self.loader.get_source('%s.%s' % (self.parent, fullname))
+
+    def can_load(self, fullname):
+        return self.loader.can_load('%s.%s' % (self.parent, fullname))
+
+    def get_data(self, path):
+        return self.loader.get_data(path)
