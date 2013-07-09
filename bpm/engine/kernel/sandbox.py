@@ -1,5 +1,6 @@
 import os
 import contextlib
+import importlib
 
 import RestrictedPython
 import RestrictedPython.Guards
@@ -29,6 +30,12 @@ def exit():
     hg_importer.exec_hook = None
 
 
+def load_task_class(task_name):
+    task_module_name, _, task_class_name = task_name.rpartition('.')
+    task_module = importlib.import_module(task_module_name)
+    return getattr(task_module, task_class_name)
+
+
 def restricted_compile(source_code, path):
     return RestrictedPython.compile_restricted(source_code, path, 'exec')
 
@@ -36,6 +43,7 @@ def restricted_compile(source_code, path):
 class RestrictedExecutor(object):
     def __init__(self):
         self.__globals = dict(__builtins__=RestrictedPython.Guards.safe_builtins)
+        self.__globals['__builtins__']['__import__'] = __import__
         self.__globals['_getattr_'] = getattr
         self.__globals['_getitem_'] = default_guarded_getitem
         self.__globals['_write_'] = default_guarded_write
@@ -44,10 +52,12 @@ class RestrictedExecutor(object):
 
 
     def __call__(self, compiled_code, exec_locals):
+        self.__globals['__name__'] = exec_locals['__name__']
         # TODO maintain a stack
         os.environ.setdefault('BPM_LOGGER_NAME', exec_locals['__name__'])
         os.environ.setdefault('BPM_LOGGER_REVISION', 'tip')
         exec (compiled_code, self.__globals, exec_locals)
+        self.__globals.update(exec_locals) # IMPORTANT!!! pickle.dumps will save the execution context
 
 
 def default_guarded_getitem(ob, index):

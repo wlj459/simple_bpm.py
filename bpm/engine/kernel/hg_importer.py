@@ -77,9 +77,9 @@ class HgLoader(object):
 
     def load_module(self, fullname):
         print('load_module', fullname)
-        is_package = self.is_package(fullname)
+        is_package, source_code, module_file = self._get_source(fullname)
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
-        mod.__file__ = 'somewhere from __MERCURIAL__' # TODO describe exact location
+        mod.__file__ = module_file
         mod.__loader__ = self
         if is_package:
             mod.__path__ = [MERCURIAL_SYS_PATH]
@@ -113,11 +113,13 @@ class HgLoader(object):
     def _get_source(self, fullname):
         try:
             try:
-                return True, self.get_data('%s/__init__.py' % fullname.replace('.', '/'))
+                module_file = '%s/__init__.py' % fullname.replace('.', '/')
+                return True, self.get_data(module_file), module_file
             except IOError:
                 pass
             try:
-                return False, self.get_data('%s.py' % fullname.replace('.', '/'))
+                module_file = '%s.py' % fullname.replace('.', '/')
+                return False, self.get_data(module_file), module_file
             except IOError as e:
                 raise ImportError('adapted from IOError: %s' % e)
         except ImportError:
