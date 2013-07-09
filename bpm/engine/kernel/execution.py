@@ -9,7 +9,6 @@ from mercurial import hg, ui
 from mercurial.error import RepoError, RepoLookupError, ManifestLookupError
 
 from . import features
-from .log import BPMLogger
 
 _ERR_MSG0 = 'No module named {!r}'
 _ERR_MSG1 = 'cannot import name {!r}'
@@ -257,7 +256,6 @@ class BaseExecutor(object):
         self.__globals['_getattr_'] = default_guarded_getattr
         self.__globals['_getitem_'] = default_guarded_getitem
         self.__globals['_write_'] = default_guarded_write
-        self.__globals['_print_'] = BPMLogger
         self.__globals['_getiter_'] = default_guarded_getiter
 
         try:

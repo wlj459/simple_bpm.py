@@ -6,6 +6,7 @@ import mercurial.hg
 import mercurial.ui
 import mercurial.error
 import imp
+import contextlib
 
 # signature: source_code, path => module
 # will be implemented using RestrictedPython
@@ -16,15 +17,22 @@ exec_hook = None
 LOGGER = logging.getLogger(__name__)
 MERCURIAL_SYS_PATH = '__MERCURIAL__'
 
+@contextlib.contextmanager
+def enter_context():
+    try:
+        enter()
+        yield
+    finally:
+        exit()
 
-def setUp():
+def enter():
     assert compile_hook
     assert exec_hook
     if MERCURIAL_SYS_PATH not in sys.path:
         sys.path.append(MERCURIAL_SYS_PATH)
         sys.path_hooks.append(path_hook)
 
-def tearDown():
+def exit():
     pass # TODO: unregister from sys.path and clear sys.modules
 
 
@@ -40,7 +48,7 @@ class HgFinder(object):
         self.loader_stack = []
 
     def find_module(self, fullname, path=None):
-        # print('find_module', fullname, path)
+        print('find_module', fullname, path)
         repo_name = fullname.partition('.')[0]
         if self.loader_stack:
             current_loader = self.loader_stack[-1]
@@ -68,7 +76,7 @@ class HgLoader(object):
         self.revision = repo['tip']
 
     def load_module(self, fullname):
-        # print('load_module', fullname)
+        print('load_module', fullname)
         is_package = self.is_package(fullname)
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = 'somewhere from __MERCURIAL__' # TODO describe exact location

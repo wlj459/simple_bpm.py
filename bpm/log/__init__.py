@@ -107,8 +107,6 @@ class Logger(object):
         self.revision = revision
 
     def _handle(self, record):
-        pass
-        print '_handle'
         try:
             log.apply_async(args=tuple(record), retry=False)
         except:
