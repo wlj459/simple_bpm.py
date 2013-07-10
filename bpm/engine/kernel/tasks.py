@@ -3,10 +3,12 @@ import celery
 import cPickle as pickle
 import stackless
 import importlib
+import logging
 
 from . import signals, states, sandbox
 from .models import Task
 
+LOGGER = logging.getLogger(__name__)
 
 @celery.task(ignore_result=True)
 def acknowledge(task_id):

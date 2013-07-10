@@ -4,10 +4,14 @@ import importlib
 
 import RestrictedPython
 import RestrictedPython.Guards
+import logging
+import sys
 
 from . import hg_importer
 from bpm.log import get_logger as bpm_get_logger
 
+
+LOGGER = logging.getLogger(__name__)
 
 @contextlib.contextmanager
 def enter_context():
@@ -20,7 +24,7 @@ def enter_context():
 
 def enter():
     hg_importer.compile_hook = restricted_compile
-    hg_importer.exec_hook = RestrictedExecutor()
+    hg_importer.exec_hook = restricted_exec
     hg_importer.enter()
 
 
@@ -33,31 +37,28 @@ def exit():
 def load_task_class(task_name):
     task_module_name, _, task_class_name = task_name.rpartition('.')
     task_module = importlib.import_module(task_module_name)
-    return getattr(task_module, task_class_name)
+    task_class = getattr(task_module, task_class_name)
+    return task_class
 
 
 def restricted_compile(source_code, path):
     return RestrictedPython.compile_restricted(source_code, path, 'exec')
 
 
-class RestrictedExecutor(object):
-    def __init__(self):
-        self.__globals = dict(__builtins__=RestrictedPython.Guards.safe_builtins)
-        self.__globals['__builtins__']['__import__'] = __import__
-        self.__globals['_getattr_'] = getattr
-        self.__globals['_getitem_'] = default_guarded_getitem
-        self.__globals['_write_'] = default_guarded_write
-        self.__globals['_print_'] = PrintHandler
-        self.__globals['_getiter_'] = default_guarded_getiter
-
-
-    def __call__(self, compiled_code, exec_locals):
-        self.__globals['__name__'] = exec_locals['__name__']
-        # TODO maintain a stack
-        os.environ.setdefault('BPM_LOGGER_NAME', exec_locals['__name__'])
-        os.environ.setdefault('BPM_LOGGER_REVISION', 'tip')
-        exec (compiled_code, self.__globals, exec_locals)
-        self.__globals.update(exec_locals) # IMPORTANT!!! pickle.dumps will save the execution context
+def restricted_exec(compiled_code, exec_locals):
+    exec_globals = dict(__builtins__=RestrictedPython.Guards.safe_builtins)
+    exec_globals['__builtins__']['__import__'] = __import__
+    exec_globals['_getattr_'] = getattr
+    exec_globals['_getitem_'] = default_guarded_getitem
+    exec_globals['_write_'] = default_guarded_write
+    exec_globals['_print_'] = PrintHandler
+    exec_globals['_getiter_'] = default_guarded_getiter
+    exec_globals['__name__'] = exec_locals['__name__']
+    # TODO maintain a stack to fix logger name
+    os.environ.setdefault('BPM_LOGGER_NAME', exec_locals['__name__'])
+    os.environ.setdefault('BPM_LOGGER_REVISION', 'tip')
+    exec (compiled_code, exec_globals, exec_locals)
+    exec_globals.update(exec_locals) # IMPORTANT!!! pickle.dumps will save the execution context
 
 
 def default_guarded_getitem(ob, index):

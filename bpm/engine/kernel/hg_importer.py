@@ -9,7 +9,6 @@ import imp
 import contextlib
 
 # signature: source_code, path => module
-# will be implemented using RestrictedPython
 compile_hook = None
 # signature: compiled_code, module.__dict__ => void
 exec_hook = None
@@ -56,7 +55,7 @@ class HgFinder(object):
         self.loaded_modules = {}
 
     def find_module(self, fullname, path=None):
-        # print('find_module', fullname, path)
+        LOGGER.debug('find_module: %s %s' % (fullname, path))
         if fullname.endswith('.'):
             return None
         repo_name = fullname.partition('.')[0]
@@ -66,10 +65,15 @@ class HgFinder(object):
                 return current_loader
         try:
             repo = mercurial.hg.repository(mercurial.ui.ui(), '%s/%s/' % (settings.REPO_ROOT, repo_name))
-            LOGGER.info('import %s is found as hg repo' % repo_name)
-            return HgLoader(self, repo)
+            loader = HgLoader(self, repo)
+            if loader.can_load(fullname):
+                LOGGER.debug('%s is found as hg repo' % repo_name)
+                return loader
+            else:
+                LOGGER.debug('%s not found in hg repo %s' % (fullname, repo_name))
+                return None
         except mercurial.error.RepoError:
-            LOGGER.debug('import %s not found as hg repo' % repo_name)
+            LOGGER.debug('%s not found as hg repo' % repo_name)
             return None
 
     def push_loader(self, loader):
@@ -95,11 +99,10 @@ class HgLoader(object):
         self.revision = repo['tip']
 
     def load_module(self, fullname):
-        # print('load_module', fullname)
+        LOGGER.debug('load_module: %s' % fullname)
         is_package, source_code, module_file = self._get_source(fullname)
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = module_file
-        mod.__loader__ = self
         if is_package:
             mod.__path__ = [MERCURIAL_SYS_PATH]
             mod.__package__ = fullname
@@ -112,6 +115,7 @@ class HgLoader(object):
         finally:
             self.finder.pop_loader()
         self.finder.add_loaded_module(mod)
+        LOGGER.debug('loaded %s' % mod)
         return mod
 
     def get_code(self, fullname):
