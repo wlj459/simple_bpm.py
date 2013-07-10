@@ -37,6 +37,10 @@ def enter():
 
 def exit():
     global current_finder
+    sys.path.remove(MERCURIAL_SYS_PATH)
+    sys.path_hooks.remove(path_hook)
+    if MERCURIAL_SYS_PATH in sys.path_importer_cache:
+        del sys.path_importer_cache[MERCURIAL_SYS_PATH]
     try:
         current_finder.unload()
     finally:
@@ -86,9 +90,9 @@ class HgFinder(object):
         self.loaded_modules[mod.__name__] = mod
 
     def unload(self):
+        LOGGER.debug('unload %s' % self.loaded_modules)
         for module_name in self.loaded_modules:
             if module_name in sys.modules:
-                # print('unload', module_name)
                 del sys.modules[module_name]
 
 

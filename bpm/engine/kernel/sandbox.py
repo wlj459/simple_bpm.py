@@ -54,11 +54,17 @@ def restricted_exec(compiled_code, exec_locals):
     exec_globals['_print_'] = PrintHandler
     exec_globals['_getiter_'] = default_guarded_getiter
     exec_globals['__name__'] = exec_locals['__name__']
-    # TODO maintain a stack to fix logger name
-    os.environ.setdefault('BPM_LOGGER_NAME', exec_locals['__name__'])
-    os.environ.setdefault('BPM_LOGGER_REVISION', 'tip')
-    exec (compiled_code, exec_globals, exec_locals)
-    exec_globals.update(exec_locals) # IMPORTANT!!! pickle.dumps will save the execution context
+    orig_logger_name = os.environ.get('BPM_LOGGER_NAME')
+    orig_logger_revision = os.environ.get('BPM_LOGGER_REVISION')
+    os.environ['BPM_LOGGER_NAME'] = exec_locals['__name__']
+    os.environ['BPM_LOGGER_REVISION'] = 'tip'
+    try:
+        exec (compiled_code, exec_globals, exec_locals)
+    finally:
+        exec_globals.update(exec_locals) # IMPORTANT!!! pickle.dumps will save the execution context
+        if orig_logger_name and orig_logger_revision:
+            os.environ['BPM_LOGGER_NAME'] = orig_logger_name
+            os.environ['BPM_LOGGER_REVISION'] = orig_logger_revision
 
 
 def default_guarded_getitem(ob, index):

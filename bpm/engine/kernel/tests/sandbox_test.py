@@ -26,5 +26,17 @@ print(BaseComponent)
         import my_module
         self.assertEqual(1, Record.objects.count())
         record = Record.objects.all()[0]
-        # self.assertEqual('my_module', record.logger) TODO: fix the logger name
+        self.assertEqual('my_module', record.logger)
         self.assertIn('BaseComponent', record.message)
+
+    def test_logger_name(self):
+        self.repo.set_data('my_module|tip|my_module/__init__.py', """
+import sub_module
+print('hello')
+""")
+        self.repo.set_data('my_module|tip|my_module/sub_module.py', '')
+        import my_module
+        self.assertEqual(1, Record.objects.count())
+        record = Record.objects.all()[0]
+        self.assertEqual('my_module', record.logger)
+        self.assertEqual('hello', record.message)
