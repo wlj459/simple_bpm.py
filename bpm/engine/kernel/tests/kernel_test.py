@@ -65,7 +65,6 @@ class BasicComponent(BaseComponent):
 from bpm.engine.kernel import BaseComponent
 from bpm.engine.kernel import BaseProcess
 from bpm.log import get_logger
-from bpm.engine.kernel import internal_import
 
 logger = get_logger()
 

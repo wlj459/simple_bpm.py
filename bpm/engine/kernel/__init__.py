@@ -1,5 +1,4 @@
-__all__ = ['BaseTaskBackend', 'BaseComponent', 'BaseProcess',
-           'internal_import']
+__all__ = ['BaseTaskBackend', 'BaseComponent', 'BaseProcess']
 
 from . import receivers, celery_signals
 from .backends.base import BaseTaskBackend

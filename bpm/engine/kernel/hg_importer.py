@@ -16,6 +16,7 @@ exec_hook = None
 
 LOGGER = logging.getLogger(__name__)
 MERCURIAL_SYS_PATH = '__MERCURIAL__'
+current_finder = None
 
 @contextlib.contextmanager
 def enter_context():
@@ -26,6 +27,9 @@ def enter_context():
         exit()
 
 def enter():
+    global current_finder
+    assert current_finder is None
+    current_finder = HgFinder() # TODO: adding versioning to finder
     assert compile_hook
     assert exec_hook
     if MERCURIAL_SYS_PATH not in sys.path:
@@ -33,12 +37,15 @@ def enter():
         sys.path_hooks.append(path_hook)
 
 def exit():
-    pass # TODO: unregister from sys.path and clear sys.modules
-
+    global current_finder
+    try:
+        current_finder.unload()
+    finally:
+        current_finder = None
 
 def path_hook(path):
     if MERCURIAL_SYS_PATH == path:
-        return HgFinder()
+        return current_finder
     else:
         raise ImportError()
 
@@ -46,9 +53,12 @@ def path_hook(path):
 class HgFinder(object):
     def __init__(self):
         self.loader_stack = []
+        self.loaded_modules = {}
 
     def find_module(self, fullname, path=None):
-        print('find_module', fullname, path)
+        # print('find_module', fullname, path)
+        if fullname.endswith('.'):
+            return None
         repo_name = fullname.partition('.')[0]
         if self.loader_stack:
             current_loader = self.loader_stack[-1]
@@ -68,6 +78,15 @@ class HgFinder(object):
     def pop_loader(self):
         return self.loader_stack.pop()
 
+    def add_loaded_module(self, mod):
+        self.loaded_modules[mod.__name__] = mod
+
+    def unload(self):
+        for module_name in self.loaded_modules:
+            if module_name in sys.modules:
+                # print('unload', module_name)
+                del sys.modules[module_name]
+
 
 class HgLoader(object):
     def __init__(self, finder, repo):
@@ -76,7 +95,7 @@ class HgLoader(object):
         self.revision = repo['tip']
 
     def load_module(self, fullname):
-        print('load_module', fullname)
+        # print('load_module', fullname)
         is_package, source_code, module_file = self._get_source(fullname)
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = module_file
@@ -92,6 +111,7 @@ class HgLoader(object):
             exec_hook(compiled_code, mod.__dict__)
         finally:
             self.finder.pop_loader()
+        self.finder.add_loaded_module(mod)
         return mod
 
     def get_code(self, fullname):
