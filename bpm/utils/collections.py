@@ -6,11 +6,7 @@ An extension of built-in collections module.
 """
 from __future__ import absolute_import
 
-import collections as builtin_collections
-
-for name in dir(builtin_collections):
-    if not name.startswith('_'):
-        locals()[name] = getattr(builtin_collections, name)
+from collections import *
 
 
 class ConstantDict(dict):
