@@ -44,18 +44,18 @@ class TaskHandler(object):
         cleaned_args, cleaned_kwargs = clean(*args, **kwargs)
 
         try:
-            parent_model = Task.objects.get(pk=self.process._task_id)
+            parent = Task.objects.get(pk=self.process._task_id)
         except Task.DoesNotExist:
             pass
         else:
-            task_model = Task(name=self.task_name,
-                              parent=parent_model,
-                              identifier_code=self.identifier_code,
-                              token_code=self.token_code,
-                              args=json.dumps(cleaned_args),
-                              kwargs=json.dumps(cleaned_kwargs),
-                              ttl=parent_model.ttl + 1)
-            task_model.save()
+            task = Task(name=self.task_name,
+                        parent=parent,
+                        identifier_code=self.identifier_code,
+                        token_code=self.token_code,
+                        args=json.dumps(cleaned_args),
+                        kwargs=json.dumps(cleaned_kwargs),
+                        ttl=parent.ttl + 1)
+            task.save()
 
     @transaction.commit_on_success()  # Important !
     def _model_object(self):
@@ -66,17 +66,17 @@ class TaskHandler(object):
             pass
 
     def join(self):
-        task_model = self._model_object()
-        while not task_model or task_model.state not in states.ARCHIVE_STATES:
+        task = self._model_object()
+        while not task or task.state not in states.ARCHIVE_STATES:
             stackless.schedule()
-            model_object = self._model_object()
+            task = self._model_object()
 
-        return task_model
+        return task
 
     def read(self):
-        task_model = self.join()
-        if task_model.data:
-            return json.loads(task_model.data)
+        task = self.join()
+        if task.data:
+            return json.loads(task.data)
 
 
 class AbstractProcess(AbstractBaseTaskBackend):
@@ -102,9 +102,9 @@ class AbstractProcess(AbstractBaseTaskBackend):
         archived_handler_count = 0
         blocked_handler_count = 0
         for handler, name in self._handler_registry.iteritems():
-            model_object = handler.model_object()
-            if model_object is not None:
-                if model_object.state in states.ARCHIVE_STATES:
+            task = handler._model_object()
+            if task is not None:
+                if task.state in states.ARCHIVE_STATES:
                     archived_handler_count += 1
             else:
                 blocked_handler_count += 1
@@ -128,10 +128,10 @@ class AbstractProcess(AbstractBaseTaskBackend):
             self.complete()
 
     def complete(self, *args, **kwargs):
-        model_object = self._model_object()
-        if model_object is not None:
+        task = self._model_object()
+        if task is not None:
             cleaned_args, cleaned_kwargs = clean(*args, **kwargs)
-            model_object.complete(*cleaned_args, **cleaned_kwargs)
+            task.complete(*cleaned_args, **cleaned_kwargs)
 
     def tasklet(self, task, predecessors=None):
         assert issubclass(task, AbstractBaseTaskBackend)

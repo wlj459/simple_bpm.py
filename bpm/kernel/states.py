@@ -1,11 +1,9 @@
+# -*- coding: utf-8 -*-
 """
 bpm.kernel.states
 =================
 
-Built-in task states.
-
-States
-------
+此模块定义了内置的任务状态。
 """
 from bpm.utils.collections import ConstantDict
 

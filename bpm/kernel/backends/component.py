@@ -32,13 +32,6 @@ class AbstractComponent(AbstractBaseTaskBackend):
         else:
             raise AttributeError, 'can not set _'
 
-    def start(self, *args, **kwargs):
-        """
-        start方法需要组件开发者实现, 如cc接口调用， 如果没有设置self.enable_schedule=True，
-        则返回的值会直接作为组件的结果进行 callback(celery backends)
-        """
-        raise NotImplementedError
-
     def set_default_scheduler(self, on_schedule):
         assert isinstance(on_schedule, types.MethodType)
         assert self is getattr(on_schedule, 'im_self')
@@ -82,9 +75,9 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
     def complete(self, *args, **kwargs):
         self.completed = True
-        model_object = self._model_object()
-        if model_object is not None:
-            model_object.complete(*args, **kwargs)
+        task = self._model_object()
+        if task is not None:
+            task.complete(*args, **kwargs)
 
 
 class DefaultIntervalGenerator(object):

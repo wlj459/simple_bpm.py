@@ -30,10 +30,10 @@ class AbstractBaseTaskBackend(object):
         """
         initiate
         """
-        task_model = self._model_object()
-        if task_model:
+        task = self._model_object()
+        if task:
             self._register(stackless.tasklet(self.start)(*args, **kwargs),
-                           task_model.name)
+                           task.name)
         else:
             raise Exception  # TODO
 
