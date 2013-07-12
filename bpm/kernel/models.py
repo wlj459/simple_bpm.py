@@ -82,7 +82,7 @@ class TaskManager(models.Manager):
             if appointment_flag:  # 一旦处理了预约，就将其置空
                 kwargs['appointment'] = ''
             if to_state in states.ARCHIVE_STATES:
-                kwargs['archive'] = ''
+                kwargs['snapshot'] = ''
 
             rows = self.model.objects.filter(
                 pk=instance.pk,

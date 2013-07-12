@@ -1,0 +1,5 @@
+data/some_package1/__init__.py.i
+data/.hgignore.i
+data/simple_package/simple_module.py.i
+data/__init__.py.i
+data/simple_package/__init__.py.i

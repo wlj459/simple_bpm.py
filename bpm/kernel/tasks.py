@@ -9,10 +9,13 @@ import celery
 import cPickle as pickle
 import json
 import stackless
+import importlib
+import logging
 
-from bpm.kernel import signal, states
-from bpm.kernel.models import Task
+from . import signals, states, sandbox
+from .models import Task
 
+LOGGER = logging.getLogger(__name__)
 
 @celery.task(ignore_result=True)
 def acknowledge(task_id):
@@ -35,20 +38,15 @@ def schedule(task_id):
         pass
     else:
         if task.transit(states.RUNNING):
-            executor = execution.TaskExecutor(task)
-            if executor.execute():
-                locals().update(executor.locals())
-                cls = locals()[task.name.split('.')[-1]]
+            with sandbox.enter_context():
+                backend = pickle.loads(str(task.snapshot))
+                backend._resume()
 
-                with Serialization(executor.locals().values()):
-                    backend = pickle.loads(str(task.archive))
-                    backend._resume()
-
+                stackless.schedule()
+                while backend._schedule():
                     stackless.schedule()
-                    while backend._schedule():
-                        stackless.schedule()
 
-                    task.transit(states.BLOCKED, archive=pickle.dumps(backend))
+                task.transit(states.BLOCKED, snapshot=pickle.dumps(backend))
                 backend._destroy()
 
 
@@ -60,11 +58,8 @@ def initiate(task_id):
     except Task.DoesNotExist:
         pass
     else:
-        executor = execution.TaskExecutor(task)
-        if executor.execute():
-            locals().update(executor.locals())
-            cls = locals()[task.name.split('.')[-1]]
-
+        with sandbox.enter_context():
+            cls = sandbox.load_task_class(task.name)
             backend = cls(task.pk, task.name)
 
             args = []
@@ -76,8 +71,7 @@ def initiate(task_id):
                 kwargs = json.loads(task.kwargs)
 
             backend._initiate(*args, **kwargs)
-            with Serialization(executor.locals().values()):
-                task.transit(states.READY, archive=pickle.dumps(backend))
+            task.transit(states.READY, snapshot=pickle.dumps(backend))
             backend._destroy()
 
 
