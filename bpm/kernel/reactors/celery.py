@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """
-bpm.kernel.signal.handlers.celery
-=================================
+bpm.kernel.reactors.celery
+==========================
 
-Celery signal handlers.
+Celery signal reactors.
 """
 from __future__ import absolute_import
 

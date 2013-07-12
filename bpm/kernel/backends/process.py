@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-bpm.kernel.task.impl.process
-============================
+bpm.kernel.backends.process
+===========================
 """
 import json
 import stackless
@@ -10,7 +10,7 @@ from django.db import transaction
 
 from bpm.kernel import signals, states
 from bpm.kernel.models import Task
-from bpm.kernel.task import AbstractBaseTask
+from bpm.kernel.backends import AbstractBaseTaskBackend
 from bpm.utils import random
 
 
@@ -28,37 +28,37 @@ class TaskHandler(object):
             predecessors = []
         self.predecessors = predecessors
 
-        self.identifier_code = random.salt()
-        self.token_code = random.salt()
+        self.identifier_code = random.randstr()
+        self.token_code = random.randstr()
         self.process._register(self, self.task_name, obj_type='handler')
 
     def __call__(self, *args, **kwargs):
-        self.process._register(stackless.tasklet(self.handle)(*args, **kwargs),
+        self.process._register(stackless.tasklet(self._handle)(*args, **kwargs),
                                self.task_name)
         return self
 
-    def handle(self, *args, **kwargs):
+    def _handle(self, *args, **kwargs):
         if self.predecessors:
             join(*self.predecessors)
 
         cleaned_args, cleaned_kwargs = clean(*args, **kwargs)
 
         try:
-            parent = Task.objects.get(pk=self.process._task_id)
+            parent_model = Task.objects.get(pk=self.process._task_id)
         except Task.DoesNotExist:
             pass
         else:
-            task = Task(name=self.task_name,
-                        parent=parent,
-                        identifier_code=self.identifier_code,
-                        token_code=self.token_code,
-                        args=json.dumps(cleaned_args),
-                        kwargs=json.dumps(cleaned_kwargs),
-                        ttl=parent.ttl + 1)
-            task.save()
+            task_model = Task(name=self.task_name,
+                              parent=parent_model,
+                              identifier_code=self.identifier_code,
+                              token_code=self.token_code,
+                              args=json.dumps(cleaned_args),
+                              kwargs=json.dumps(cleaned_kwargs),
+                              ttl=parent_model.ttl + 1)
+            task_model.save()
 
     @transaction.commit_on_success()  # Important !
-    def model_object(self):
+    def _model_object(self):
         try:
             return Task.objects.get(identifier_code=self.identifier_code,
                                     token_code=self.token_code)
@@ -66,27 +66,39 @@ class TaskHandler(object):
             pass
 
     def join(self):
-        model_object = self.model_object()
-        while not model_object or model_object.state not in states.ARCHIVE_STATES:
+        task_model = self._model_object()
+        while not task_model or task_model.state not in states.ARCHIVE_STATES:
             stackless.schedule()
-            model_object = self.model_object()
+            model_object = self._model_object()
 
-        return model_object
+        return task_model
 
     def read(self):
-        model_object = self.join()
-        if model_object.data:
-            return json.loads(model_object.data)
+        task_model = self.join()
+        if task_model.data:
+            return json.loads(task_model.data)
 
 
-class BaseProcess(AbstractBaseTask):
+class AbstractProcess(AbstractBaseTaskBackend):
     def __init__(self, *args, **kwargs):
-        super(BaseProcess, self).__init__(*args, **kwargs)
+        super(AbstractProcess, self).__init__(*args, **kwargs)
 
         self.count = 0
         self._handler_registry = {}
 
+    def _register(self, obj, task_name, obj_type=None):
+        """
+        register
+        """
+        if obj_type:
+            getattr(self, '_%s_registry' % obj_type)[obj] = task_name
+        else:
+            super(AbstractProcess, self)._register(obj, task_name)
+
     def _schedule(self):
+        """
+        schedule
+        """
         archived_handler_count = 0
         blocked_handler_count = 0
         for handler, name in self._handler_registry.iteritems():
@@ -106,7 +118,7 @@ class BaseProcess(AbstractBaseTask):
             return True
 
         alive_tasklet_count = 0
-        for tasklet, name in self._tasklet_registry.iteritems():
+        for tasklet, name in self._registry.iteritems():
             if tasklet.alive:
                 alive_tasklet_count += 1
 
@@ -122,10 +134,10 @@ class BaseProcess(AbstractBaseTask):
             model_object.complete(*cleaned_args, **cleaned_kwargs)
 
     def tasklet(self, task, predecessors=None):
-        assert issubclass(task, AbstractBaseTask)
+        assert issubclass(task, AbstractBaseTaskBackend)
         if predecessors is None:
             predecessors = []
-        return TaskHandler(self, '%s.%s' % (task.__module__, task.__name__), predecessors)    # here task is a class inherited from BaskTask
+        return TaskHandler(self, '%s.%s' % (task.__module__, task.__name__), predecessors)    # here backends is a class inherited from BaskTask
 
 
 def clean(*args, **kwargs):

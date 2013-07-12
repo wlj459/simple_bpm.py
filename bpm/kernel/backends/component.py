@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-bpm.kernel.task.impl.component
-==============================
+bpm.kernel.backends.component
+=============================
 """
 import stackless
 import types
@@ -10,10 +10,10 @@ from django.conf import settings
 
 from bpm.kernel import signals, states
 from bpm.kernel.models import Task
-from bpm.kernel.task import AbstractBaseTask
+from bpm.kernel.backends import AbstractBaseTaskBackend
 
 
-class BaseComponent(AbstractBaseTask):
+class AbstractComponent(AbstractBaseTaskBackend):
     """
         组件类需要继承此类
         并实现 start 方法
@@ -22,7 +22,7 @@ class BaseComponent(AbstractBaseTask):
     """
 
     def __init__(self, *args, **kwargs):
-        super(BaseComponent, self).__init__(*args, **kwargs)
+        super(AbstractComponent, self).__init__(*args, **kwargs)
         self.schedule_count = 1
         self.completed = False
 
@@ -35,7 +35,7 @@ class BaseComponent(AbstractBaseTask):
     def start(self, *args, **kwargs):
         """
         start方法需要组件开发者实现, 如cc接口调用， 如果没有设置self.enable_schedule=True，
-        则返回的值会直接作为组件的结果进行 callback(celery task)
+        则返回的值会直接作为组件的结果进行 callback(celery backends)
         """
         raise NotImplementedError
 

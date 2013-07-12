@@ -1,19 +1,25 @@
 """
 bpm.utils.random
 ================
+
+An extension of built-in random module.
 """
 from __future__ import absolute_import
 
-import random
+import random as builtin_random
+
+for name in dir(builtin_random):
+    if not name.startswith('_'):
+        locals()[name] = getattr(builtin_random, name)
 
 
-def salt(length=6):
+def randstr(length=6):
     """
-    >>> salt() == salt()
+    >>> randstr() == randstr()
     False
 
-    >>> len(salt(8))
+    >>> len(randstr(8))
     8
     """
     ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    return ''.join([random.choice(ALPHABET) for _ in range(length)])
+    return ''.join([builtin_random.choice(ALPHABET) for _ in range(length)])

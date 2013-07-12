@@ -39,11 +39,11 @@ _PRECEDENCE = ConstantDict({
 def precedence(state):
     """Get the precedence for state::
 
-    >>> precedence(PENDING)
-    0
+        >>> precedence(PENDING)
+        0
 
-    >>> precedence('UNKNOWN')
-    -1
+        >>> precedence('UNKNOWN')
+        -1
     """
     if state in _PRECEDENCE:
         return _PRECEDENCE[state]
@@ -93,11 +93,11 @@ _TRANSITION = ConstantDict({
 def can_transit(from_state, to_state):
     """Test if :param:`from_state` can transit to :param:`to_state`::
 
-    >>> can_transit(PENDING, READY)
-    True
+        >>> can_transit(PENDING, READY)
+        True
 
-    >>> can_transit(PENDING, RUNNING)
-    False
+        >>> can_transit(PENDING, RUNNING)
+        False
     """
     if from_state in _TRANSITION:
         if to_state in _TRANSITION[from_state]:

@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """
-bpm.kernel.signal.handlers.builtin
-==================================
+bpm.kernel.reactors.django
+==========================
 
-Built-in signal handlers.
+Built-in signal reactors.
 """
 from django.conf import settings
 from django.db.models.signals import post_save

@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """
 bpm.kernel.tasks
 ================
 
-Celery tasks of module bpm.kernel.
+此模块定义了所有 bpm.kernel 模块的 celery 任务
 """
 import celery
 import cPickle as pickle

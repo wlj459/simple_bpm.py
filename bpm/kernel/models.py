@@ -8,7 +8,7 @@ import json
 
 from django.db import models, transaction
 
-from bpm.kernel import signal, states
+from bpm.kernel import signals, states
 from bpm.utils import random
 
 
@@ -76,7 +76,7 @@ class TaskManager(models.Manager):
 
         if states.can_transit(instance.state, to_state):
             kwargs.update({
-                'check_code': random.salt(),
+                'check_code': random.randstr(),
                 'state': to_state,
             })
             if appointment_flag:  # 一旦处理了预约，就将其置空
@@ -93,7 +93,7 @@ class TaskManager(models.Manager):
                 for k, v in kwargs.iteritems():
                     setattr(instance, k, v)
 
-                state_change_signal = getattr(signal,
+                state_change_signal = getattr(signals,
                                               'task_' + to_state.lower())
 
                 if state_change_signal:
@@ -153,13 +153,13 @@ class Task(models.Model):
         max_length=6,
         null=True,
     )
-    archive = models.TextField()
+    snapshot = models.TextField()
     ack = models.PositiveSmallIntegerField(
         default=0,
     )
     check_code = models.SlugField(
         max_length=6,
-        default=utils.generate_salt(),
+        default=random.randstr(),
     )
     ttl = models.PositiveSmallIntegerField(
         default=0,
@@ -209,7 +209,7 @@ class Task(models.Model):
             return self.__class__.objects.transit(self, to_state, **kwargs)
 
     def transit_lazy(self, to_state, countdown=10):
-        signal.lazy_transit.send(sender=self.__class__,
+        signals.lazy_transit.send(sender=self.__class__,
                                   task_id=self.pk,
                                   to_state=to_state,
                                   countdown=countdown)

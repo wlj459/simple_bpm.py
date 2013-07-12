@@ -125,7 +125,7 @@ class Logger(object):
     def _log(self, level, message, args):
         """
         Low-level logging routine which creates a LogRecord and then calls
-        all the handlers of this logger to handle the record.
+        all the reactors of this logger to handle the record.
         """
         if _srcfile:
             #IronPython doesn't track Python frames, so findCaller throws an
