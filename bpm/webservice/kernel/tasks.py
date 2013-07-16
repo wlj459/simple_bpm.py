@@ -38,7 +38,7 @@ class Tasks(object):
 
                     {
                         "id": 17643,
-                        "ref_self": "http://example.com/tasks/17643"
+                        "ref_self": "/tasks/17643"
                     }
         """
         pass
@@ -82,7 +82,7 @@ class Tasks(object):
                                 "app_data": {
                                     "ijobs_task_id": "1445"
                                 },
-                                "ref_self": "http://example.com/tasks/17643"
+                                "ref_self": "/tasks/17643"
                             }, {
                                 "id": 17644,
                                 "state": 1,
@@ -94,13 +94,13 @@ class Tasks(object):
                                 "app_data": {
                                     "ijobs_task_id": "1446"
                                 },
-                                "ref_self": "http://example.com/tasks/17644"
+                                "ref_self": "/tasks/17644"
                             }
                         ],
-                        "ref_self": "/tasks/package.example.SomeProcess/by-date/2013-12-8",
-                        "ref_previous": "/tasks/package.example.SomeProcess/by-date/2013-12-7",
+                        "ref_self": "/tasks/package.example.SomeProcess/by-50-tasks-pages/103",
+                        "ref_previous": "/tasks/package.example.SomeProcess/by-50-tasks-pages/102",
                         "form_create_task": {
-                            "action": "http://example.com/tasks/package.example.SomeProcess",
+                            "action": "/tasks/package.example.SomeProcess",
                             "method": "POST",
                             "body": {
                                 "exec_kwargs": ""
