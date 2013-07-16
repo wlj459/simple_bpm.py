@@ -1,21 +1,16 @@
-.. bpm.py documentation master file, created by
-   sphinx-quickstart on Mon Jul 15 17:21:07 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to bpm.py's documentation!
+bpm.py 开发者文档
 ==================================
 
-Contents:
+目录:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-.. automodule:: bpm.webservice.kernel.tasks
-   :members:
+   api
+   spi
 
 
-Indices and tables
+索引和表格
 ==================
 
 * :ref:`genindex`
