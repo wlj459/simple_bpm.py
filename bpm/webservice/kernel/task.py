@@ -29,8 +29,8 @@ class Task(object):
                     Content-Type: application/vnd.bpm;v=1
 
                     {
-                        "id": 17643,
-                        "state": 1,
+                        "id": 101,
+                        "state": "RUNNING",
                         "task_class_name": "package.example.SomeProcess",
                         "app_code": "qtrelease",
                         "creator": "mattsu",

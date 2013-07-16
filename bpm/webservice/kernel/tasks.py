@@ -73,7 +73,7 @@ class Tasks(object):
                         "tasks": [
                             {
                                 "id": 17643,
-                                "state": 1,
+                                "state": "RUNNING",
                                 "task_class_name": "package.example.SomeProcess",
                                 "app_code": "qtrelease",
                                 "creator": "mattsu",
@@ -85,7 +85,7 @@ class Tasks(object):
                                 "ref_self": "/tasks/17643"
                             }, {
                                 "id": 17644,
-                                "state": 1,
+                                "state": "RUNNING",
                                 "task_class_name": "package.example.SomeProcess",
                                 "app_code": "qtrelease",
                                 "creator": "mattsu",
