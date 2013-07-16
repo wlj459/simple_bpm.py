@@ -1,5 +1,5 @@
 API手册（供App开发者控制后台任务）
-=============================
+====================================================
 
 bpm.py 以 HTTP GET/POST 的形式（所谓Restful）提供API给App开发者调用，以控制后台任务的起停等。
 
@@ -16,4 +16,7 @@ bpm.py 以 HTTP GET/POST 的形式（所谓Restful）提供API给App开发者调
    :members:
 
 .. automodule:: bpm.webservice.kernel.tries
+   :members:
+
+.. automodule:: bpm.webservice.kernel.resumptions
    :members:
