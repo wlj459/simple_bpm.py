@@ -5,7 +5,7 @@ class Tries(object):
     """
     def post(self):
         """
-        .. http:post:: /tasks/(int:task_id)/tasks
+        .. http:post:: /tasks/(int:task_id)/tries
 
             重试给定id的任务（实际是以创建一个新的任务的方式再次执行）
 

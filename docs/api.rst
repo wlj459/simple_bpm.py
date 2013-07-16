@@ -20,3 +20,6 @@ bpm.py 以 HTTP GET/POST 的形式（所谓Restful）提供API给App开发者调
 
 .. automodule:: bpm.webservice.kernel.resumptions
    :members:
+
+.. automodule:: bpm.webservice.kernel.trace
+   :members:
