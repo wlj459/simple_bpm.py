@@ -7,7 +7,7 @@ class Revocations(object):
         """
         .. http:post:: /tasks/(int:task_id)/appointments/revocations
 
-            列出给定id的任务的详情。
+            创建对给定id的任务的撤销预约。
 
             :param task_id: 任务的id
             :type task_id: int
@@ -27,7 +27,7 @@ class Revocations(object):
 
                 .. sourcecode:: http
 
-                    HTTP/1.1 200 OK
+                    HTTP/1.1 201 CREATED
                     Content-Type: application/vnd.bpm;v=1
 
                     {
