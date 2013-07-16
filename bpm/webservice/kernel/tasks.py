@@ -47,7 +47,7 @@ class Tasks(object):
         """
         .. http:get:: /tasks/(str:task_class_name)
 
-            列出给定任务定义的所有任务实例。
+            列出给定任务定义的所有任务实例。如果一个任务被重试多次，列表只会列出最后重试的任务。
 
             :param task_class_name: 任务定义的Python类名
             :type task_class_name: str
