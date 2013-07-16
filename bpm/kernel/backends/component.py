@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-bpm.kernel.backends.component
-=============================
-"""
 import stackless
 import types
 
@@ -15,10 +11,10 @@ from bpm.kernel.backends import AbstractBaseTaskBackend
 
 class AbstractComponent(AbstractBaseTaskBackend):
     """
-        组件类需要继承此类
-        并实现 start 方法
-        如果组件调用的接口是异步的，建议使用辅助方法进行同步化
-        辅助方法会提供多种轮询算法，特别对于审批、定时之类的耗时比较长的任务比较适用
+    组件类需要继承此类
+    并实现 start 方法
+    如果组件调用的接口是异步的，建议使用辅助方法进行同步化
+    辅助方法会提供多种轮询算法，特别对于审批、定时之类的耗时比较长的任务比较适用
     """
 
     def __init__(self, *args, **kwargs):

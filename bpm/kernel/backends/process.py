@@ -80,6 +80,9 @@ class TaskHandler(object):
 
 
 class AbstractProcess(AbstractBaseTaskBackend):
+    """
+    过程类需要继承此类
+    """
     def __init__(self, *args, **kwargs):
         super(AbstractProcess, self).__init__(*args, **kwargs)
 
