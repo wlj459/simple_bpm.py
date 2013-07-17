@@ -54,6 +54,7 @@ def restricted_exec(compiled_code, exec_locals):
     exec_globals['_getattr_'] = getattr
     exec_globals['_getitem_'] = default_guarded_getitem
     exec_globals['_write_'] = default_guarded_write
+    exec_globals['_apply_'] = default_guarded_apply
     exec_globals['_print_'] = PrintHandler
     exec_globals['_getiter_'] = default_guarded_getiter
     exec_globals['__name__'] = exec_locals['__name__']
@@ -68,6 +69,10 @@ def restricted_exec(compiled_code, exec_locals):
         if orig_logger_name and orig_logger_revision:
             os.environ['BPM_LOGGER_NAME'] = orig_logger_name
             os.environ['BPM_LOGGER_REVISION'] = orig_logger_revision
+
+
+def default_guarded_apply(func, *args, **kwargs):
+    return func(*args, **kwargs)
 
 
 def default_guarded_getitem(ob, index):

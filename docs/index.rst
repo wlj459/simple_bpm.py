@@ -6,8 +6,9 @@ bpm.py 开发者文档
 .. toctree::
    :maxdepth: 1
 
-   api
-   spi
+   app
+   component
+   process
 
 
 索引和表格

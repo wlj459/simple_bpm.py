@@ -52,7 +52,7 @@ class BasicComponent(AbstractComponent):
     def on_schedule(self):
         logger.debug('Component on_schedule')
         if self.schedule_count >= 3:
-            self.complete('task done: %s' % self.task_id)
+            self.complete(**{"data":'task done: %s' % self.task_id})
         """)
         task = Task.objects.start('test_component.BasicComponent', args=['abcd'])
         print(self.job_queue.jobs)
