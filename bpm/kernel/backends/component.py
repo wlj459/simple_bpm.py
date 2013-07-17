@@ -102,13 +102,15 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
     def complete(self, data=None, ex_data=None, return_code=0):
         """
-        结束组件的执行。调用的时机可以是 :py:meth:start 也可以是 :py:meth:on_schedule
+        把组件的状态置为已完成，并设置返回值。虽然本调用后面的语句仍然会被执行，但是不推荐这么做。
+        调用的时机可以是 :py:meth:start 也可以是 :py:meth:on_schedule 。
+        组件必须显式地调用complete，与过程不同
 
         :param data: 组件的返回值。调用者如果用read()方法等待，则会获得该值
         :type data: str
         :param ex_data: 组件的其他返回。用于调试
         :type ex_data: str
-        :param return_code: 0表示正常，非0表示异常。异常情况由引擎接管
+        :param return_code: 0表示正常，非0表示异常。异常情况由引擎接管，决定是否调用后面的任务
         :type return_code: int
         :return: 无返回值
         """

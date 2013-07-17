@@ -5,3 +5,8 @@
 
 .. autoclass:: AbstractProcess
     :members:
+
+.. autoclass:: bpm.kernel.backends.process.TaskHandler
+    :special-members:
+    :members:
+    :exclude-members: __weakref__
