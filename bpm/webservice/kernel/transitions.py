@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-class Resumptions(object):
+class TransitionsToReady(object):
     """
     继续执行任务的请求
     """
     def post(self):
         """
-        .. http:post:: /tasks/(int:task_id)/resumptions
+        .. http:post:: /tasks/(int:task_id)/transitions/to-ready
 
-            创建对给定id的任务的继续执行的请求。
+            创建对给定id的任务的继续执行的请求。可以用来继续执行被暂停的任务，也可以用来外部通知组件回调。
 
             :param task_id: 任务的id
             :type task_id: int
@@ -20,7 +20,7 @@ class Resumptions(object):
 
                .. sourcecode:: http
 
-                  POST /task/101/resumptions HTTP/1.1
+                  POST /task/101/transitions/to-ready HTTP/1.1
                   Accept: application/vnd.bpm;v=1
 
             **响应的例子**:
