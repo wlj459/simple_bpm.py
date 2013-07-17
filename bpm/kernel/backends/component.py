@@ -38,7 +38,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
         start方法要么调用 :py:meth:`complete` ，要么调用 :py:meth:`set_scheduler` 。
 
-        :return 无返回值
+        :return: 无返回值
         """
         raise NotImplementedError
 
@@ -51,7 +51,8 @@ class AbstractComponent(AbstractBaseTaskBackend):
     def set_default_scheduler(self, on_schedule):
         """
         把组件设置为基于轮询的，轮询间隔为默认的算法生成，间隔随着调用轮询次数上升而变大
-        :return 无返回值
+
+        :return: 无返回值
         """
         assert isinstance(on_schedule, types.MethodType)
         assert self is getattr(on_schedule, 'im_self')
@@ -63,8 +64,9 @@ class AbstractComponent(AbstractBaseTaskBackend):
     def set_scheduler(self, on_schedule, interval):
         """
         把组件设置为基于轮询的，轮询间隔为固定的时间
+
         :param interval: 间隔时间，单位为秒
-        :return 无返回值
+        :return: 无返回值
         """
         assert isinstance(on_schedule, types.MethodType)
         assert self is getattr(on_schedule, 'im_self')
@@ -103,9 +105,12 @@ class AbstractComponent(AbstractBaseTaskBackend):
         结束组件的执行。调用的时机可以是 :py:meth:start 也可以是 :py:meth:on_schedule
 
         :param data: 组件的返回值。调用者如果用read()方法等待，则会获得该值
+        :type data: str
         :param ex_data: 组件的其他返回。用于调试
+        :type ex_data: str
         :param return_code: 0表示正常，非0表示异常。异常情况由引擎接管
-        :return 无返回值
+        :type return_code: int
+        :return: 无返回值
         """
         self.completed = True
         task = self._model_object()
