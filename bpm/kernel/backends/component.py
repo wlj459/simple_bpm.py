@@ -48,6 +48,9 @@ class AbstractComponent(AbstractBaseTaskBackend):
         else:
             raise AttributeError, 'can not set _'
 
+    def get_task_id(self):
+        return self._task_id
+
     def set_default_scheduler(self, on_schedule):
         """
         把组件设置为基于轮询的，轮询间隔为默认的算法生成，间隔随着调用轮询次数上升而变大
