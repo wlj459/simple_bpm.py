@@ -6,7 +6,7 @@ bpm.py 开发者文档
 .. toctree::
    :maxdepth: 1
 
-   app
+   api
    component
    process
 
