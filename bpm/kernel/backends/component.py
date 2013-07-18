@@ -88,7 +88,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
                                task.name)
 
                 countdown = self._interval.next()
-                if countdown >= 0:
+                if countdown is not None:
                     MIN_INTERVAL = getattr(settings, 'COMPONENT_MIN_INTERVAL', DEFAULT_MIN_INTERVAL)
                     MAX_INTERVAL = getattr(settings, 'COMPONENT_MAX_INTERVAL', DEFAULT_MAX_INTERVAL)
 
@@ -139,7 +139,6 @@ class NullIntervalGenerator(object):
 
     def next(self):
         self.count += 1
-        return -1
 
 DEFAULT_MIN_INTERVAL = 10
 DEFAULT_MAX_INTERVAL = 3600
