@@ -2,6 +2,8 @@
 from django.http import HttpResponse
 from bpm.kernel.models import Task
 from bpm.kernel.states import READY
+from bpm.webservice.kernel.task import TaskResource
+from bpm.webservice.utils import CT_V1
 
 
 class TransitionsToReady(object):
@@ -9,7 +11,7 @@ class TransitionsToReady(object):
     继续执行任务的请求
     """
     @classmethod
-    def post(cls, request, task_id):
+    def post(cls, request, task_instance):
         """
         .. http:post:: /task/(int:task_id)/transitions/to-ready
 
@@ -17,7 +19,7 @@ class TransitionsToReady(object):
 
             :param task_id: 任务的id
             :type task_id: int
-            :status 201: 继续执行的请求下达成功。返回JSON类型，任务详情
+            :status 200: 继续执行的请求下达成功。返回JSON类型，任务详情
             :status 412: 因为任务状态不可继续执行失败。返回字符串类型，错误消息
             :status 404: 给定id的任务没有找到。返回字符串类型，错误消息
             :status 500: 其他错误。返回字符串类型，错误消息
@@ -50,27 +52,15 @@ class TransitionsToReady(object):
                         "ref_self": "/tasks/101"
                     }
         """
-        task_instance = Task.objects.get(pk=task_id)
-        Task.objects.transit(task_instance, READY)
-        return HttpResponse(
-            content=cls.output_task(),
-            content_type='application/vnd.bpm;v=1', status=201, )
-
-
-    @classmethod
-    def output_task(cls):
-        return '''
-            {
-                        "id": 101,
-                        "state": "SUSPENDED",
-                        "task_class_name": "package.example.SomeProcess",
-                        "app_code": "qtrelease",
-                        "creator": "mattsu",
-                        "create_time": "2013-12-8 12:00:00 01.00",
-                        "complete_time": "2013-12-8 12:00:07.30",
-                        "app_data": {
-                            "ijobs_task_id": "1445"
-                        },
-                        "ref_self": "/tasks/101"
-                    }
-            '''
+        try:
+            result = Task.objects.transit(task_instance, READY)
+        except Exception, e:
+            return HttpResponse('Exception during transition: %s' % e,
+                                CT_V1, 500)
+        else:
+            if result:
+                return HttpResponse(TaskResource.output(task_instance),
+                                    CT_V1, 200)
+            else:
+                return HttpResponse('Current status is unable to transit to ready',
+                                    CT_V1, 412)

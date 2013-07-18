@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-class Task(object):
+
+import json
+
+class TaskResource(object):
     """任务资源，代表一个任务（也是一次执行）
     """
     def get(self):
@@ -32,14 +35,41 @@ class Task(object):
                         "id": 101,
                         "state": "RUNNING",
                         "task_class_name": "package.example.SomeProcess",
-                        "app_code": "qtrelease",
-                        "creator": "mattsu",
-                        "create_time": "2013-12-8 12:00:00 01.00",
-                        "complete_time": "2013-12-8 12:00:07.30",
-                        "app_data": {
-                            "ijobs_task_id": "1445"
-                        },
-                        "ref_self": "/tasks/101"
+                        # "app_code": "qtrelease",
+                        # "creator": "mattsu",
+                        # "create_time": "2013-12-8 12:00:00 01.00",
+                        # "complete_time": "2013-12-8 12:00:07.30",
+                        # "app_data": {
+                        #     "ijobs_task_id": "1445"
+                        # },
+                        "ref_self": "/task/101/",
+                        "parent": t_instance.id,
+                        "exec_kwargs": t_instance.kwargs,
+                        "data": t_instance.data,
+                        "ex_data": t_instance.ex_data,
+                        "return_code": t_instance.return_code,
                     }
         """
         pass
+
+    @classmethod
+    def output(cls, t_instance):
+        task_info = {
+            "id": t_instance.id,
+            "state": t_instance.state,
+            "task_class_name": t_instance.name,
+            # "app_code": "qtrelease",
+            # "creator": "mattsu",
+            # "create_time": "2013-12-8 12:00:00 01.00",
+            # "complete_time": "2013-12-8 12:00:07.30",
+            # "app_data": {
+            #     "ijobs_task_id": "1445"
+            # },
+            "ref_self": "/task/101/",
+            "parent": t_instance.id,
+            "exec_kwargs": t_instance.kwargs,
+            "data": t_instance.data,
+            "ex_data": t_instance.ex_data,
+            "return_code": t_instance.return_code,
+        }
+        return json.dumps(task_info)
