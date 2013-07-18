@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import json
-from bpm.webservice.utils import apimethod
+from bpm.webservice.utils import render_doc
 
 class TaskResource(object):
     """任务资源，代表一个任务（也是一次执行）
     """
-    @apimethod
-    def get(self):
+    @classmethod
+    @render_doc
+    def get(cls):
         """
         .. http:get:: /task/(int:task_id)
 
@@ -33,9 +34,10 @@ class TaskResource(object):
                     HTTP/1.1 200 OK
                     Content-Type: application/vnd.bpm;v=1
 
-                    ${generate_example_task()}
+                    {{ example_task|indent }}
         """
         pass
+
 
     @classmethod
     def output(cls, t_instance):
