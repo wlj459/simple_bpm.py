@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-class Tasks(object):
+class TasksResource(object):
     """任务列表资源，代表某一类任务
     """
     def post(self):
