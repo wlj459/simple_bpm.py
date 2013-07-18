@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.http import HttpResponse
+from bpm.kernel.models import Task
+from bpm.kernel.states import READY
 
 
 class TransitionsToReady(object):
@@ -48,10 +50,11 @@ class TransitionsToReady(object):
                         "ref_self": "/tasks/101"
                     }
         """
+        task_instance = Task.objects.get(pk=task_id)
+        Task.objects.transit(task_instance, READY)
         return HttpResponse(
             content=cls.output_task(),
             content_type='application/vnd.bpm;v=1', status=201, )
-        pass
 
 
     @classmethod
