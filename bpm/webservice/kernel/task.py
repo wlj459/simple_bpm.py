@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import json
+from bpm.webservice.utils import apimethod
 
 class TaskResource(object):
     """任务资源，代表一个任务（也是一次执行）
     """
+    @apimethod
     def get(self):
         """
         .. http:get:: /task/(int:task_id)
@@ -31,24 +33,7 @@ class TaskResource(object):
                     HTTP/1.1 200 OK
                     Content-Type: application/vnd.bpm;v=1
 
-                    {
-                        "id": 101,
-                        "state": "RUNNING",
-                        "task_class_name": "package.example.SomeProcess",
-                        # "app_code": "qtrelease",
-                        # "creator": "mattsu",
-                        # "create_time": "2013-12-8 12:00:00 01.00",
-                        # "complete_time": "2013-12-8 12:00:07.30",
-                        # "app_data": {
-                        #     "ijobs_task_id": "1445"
-                        # },
-                        "ref_self": "/task/101/",
-                        "parent": t_instance.id,
-                        "exec_kwargs": t_instance.kwargs,
-                        "data": t_instance.data,
-                        "ex_data": t_instance.ex_data,
-                        "return_code": t_instance.return_code,
-                    }
+                    ${generate_example_task()}
         """
         pass
 

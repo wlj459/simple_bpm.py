@@ -38,6 +38,7 @@ nosetests.xml
 .idea
 /container
 /repo
+/adapter
 
 # Sphinx Generated Html
 /docs/build
