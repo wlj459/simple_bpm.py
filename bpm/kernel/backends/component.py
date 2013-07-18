@@ -26,7 +26,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
     def __init__(self, *args, **kwargs):
         super(AbstractComponent, self).__init__(*args, **kwargs)
         self.schedule_count = 1
-        self.completed = False
+        self.active = True
 
     @abstractmethod
     def start(self):
@@ -57,18 +57,16 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
         :return: 无返回值
         """
-        assert isinstance(on_schedule, types.MethodType)
-        assert self is getattr(on_schedule, 'im_self')
+        self.set_scheduler(on_schedule, DefaultIntervalGenerator())
 
-        self._interval = DefaultIntervalGenerator()
-        self.on_schedule = on_schedule
-        self._schedule()
+    def set_null_scheduler(self, on_schedule):
+        self.set_scheduler(on_schedule, NullIntervalGenerator())
 
     def set_scheduler(self, on_schedule, interval):
         """
         把组件设置为基于轮询的，轮询间隔为固定的时间
 
-        :param interval: 间隔时间，单位为秒
+        :param interval: 生成一组间隔时间的（伪）生成器实例
         :return: 无返回值
         """
         assert isinstance(on_schedule, types.MethodType)
@@ -79,7 +77,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
         self._schedule()
 
     def _schedule(self):
-        if not self.completed and hasattr(self, '_interval'):
+        if self.active and hasattr(self, '_interval'):
             print 'component schedule'
             try:
                 task = Task.objects.get(pk=self._task_id)       # TODO: implement __instance
@@ -89,17 +87,18 @@ class AbstractComponent(AbstractBaseTaskBackend):
                 self._register(stackless.tasklet(self.on_schedule)(),
                                task.name)
 
-                MIN_INTERVAL = getattr(settings, 'COMPONENT_MIN_INTERVAL', DEFAULT_MIN_INTERVAL)
-                MAX_INTERVAL = getattr(settings, 'COMPONENT_MAX_INTERVAL', DEFAULT_MAX_INTERVAL)
-
                 countdown = self._interval.next()
-                if countdown < MIN_INTERVAL:
-                    countdown = MIN_INTERVAL
-                elif countdown > MAX_INTERVAL:
-                    countdown = MAX_INTERVAL
+                if countdown >= 0:
+                    MIN_INTERVAL = getattr(settings, 'COMPONENT_MIN_INTERVAL', DEFAULT_MIN_INTERVAL)
+                    MAX_INTERVAL = getattr(settings, 'COMPONENT_MAX_INTERVAL', DEFAULT_MAX_INTERVAL)
 
-                task.transit_lazy(states.READY, countdown=countdown)
-                self.schedule_count += 1
+                    if countdown < MIN_INTERVAL:
+                        countdown = MIN_INTERVAL
+                    elif countdown > MAX_INTERVAL:
+                        countdown = MAX_INTERVAL
+
+                    task.transit_lazy(states.READY, countdown=countdown)
+                    self.schedule_count += 1
 
         return False
 
@@ -117,7 +116,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
         :type return_code: int
         :return: 无返回值
         """
-        self.completed = True
+        self.active = False
         task = self._model_object()
         if task is not None:
             task.complete(data, ex_data, return_code)
@@ -131,6 +130,16 @@ class DefaultIntervalGenerator(object):
     def next(self):
         self.count += 1
         return self.count ** 2
+
+
+class NullIntervalGenerator(object):
+
+    def __init__(self):
+        self.count = 0
+
+    def next(self):
+        self.count += 1
+        return -1
 
 DEFAULT_MIN_INTERVAL = 10
 DEFAULT_MAX_INTERVAL = 3600
