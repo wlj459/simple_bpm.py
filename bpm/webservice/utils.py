@@ -3,6 +3,7 @@ from django.template import Context
 from django.template import Library
 from django.template import builtins
 from django.utils.safestring import mark_safe
+import json
 
 register = Library()
 builtins.append(register)
@@ -10,10 +11,10 @@ builtins.append(register)
 ACCEPT_V1 = 'application/vnd.bpm;v=1'
 CT_V1 = 'application/vnd.bpm;v=1'
 
-example_task = """
-{
-    "id": 101,
-    "state": "RUNNING",
+example_task = """{
+    "id": {{ id }},
+    "state": "{{ state|default:'RUNNING' }}",
+    "appointment": "{{ appointment }}",
     "task_class_name": "package.example.SomeProcess",
     # "app_code": "qtrelease",
     # "creator": "mattsu",
@@ -22,7 +23,7 @@ example_task = """
     # "app_data": {
     #     "ijobs_task_id": "1445"
     # },
-    "ref_self": "/task/101/",
+    "ref_self": "/task/{{ id }}/",
     "parent": t_instance.id,
     "exec_kwargs": t_instance.kwargs,
     "data": t_instance.data,
@@ -33,10 +34,16 @@ example_task = """
 
 
 @register.filter
-def indent(text, indention_levels=5):
+def render(text, kwargs):
+    kwargs = eval(kwargs)
+    indention_level = kwargs.pop('indention_level', 5)
+    text = Template(text).render(Context(kwargs))
     lines = []
-    for line in text.splitlines():
-        lines.append('    ' * indention_levels + line)
+    for i, line in enumerate(text.splitlines()):
+        if i > 0:
+            lines.append('    ' * indention_level + line)
+        else:
+            lines.append(line) # first line already indented
     return mark_safe('\n'.join(lines))
 
 

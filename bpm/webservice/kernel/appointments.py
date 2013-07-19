@@ -1,8 +1,11 @@
+from bpm.webservice.utils import render_doc
 # -*- coding: utf-8 -*-
 class AppointmentsToRevoked(object):
     """
     撤销任务的预约（请求任务在合适的时候撤销）
     """
+    @classmethod
+    @render_doc
     def post(self):
         """
         .. http:post:: /tasks/(int:task_id)/appointments/to-revoked
@@ -30,20 +33,7 @@ class AppointmentsToRevoked(object):
                     HTTP/1.1 201 CREATED
                     Content-Type: application/vnd.bpm;v=1
 
-                    {
-                        "id": 101,
-                        "state": "RUNNING",
-                        "appointment": "REVOKED",
-                        "task_class_name": "package.example.SomeProcess",
-                        "app_code": "qtrelease",
-                        "creator": "mattsu",
-                        "create_time": "2013-12-8 12:00:00 01.00",
-                        "complete_time": "2013-12-8 12:00:07.30",
-                        "app_data": {
-                            "ijobs_task_id": "1445"
-                        },
-                        "ref_self": "/tasks/101"
-                    }
+                    {{ example_task|render:"{'id':101,'appointment':'REVOKED'}" }}
         """
         pass
 
@@ -51,7 +41,9 @@ class AppointmentsToSuspended(object):
     """
     暂停任务的预约（请求任务在合适的时候暂停）
     """
-    def post(self):
+    @classmethod
+    @render_doc
+    def post(cls):
         """
         .. http:post:: /tasks/(int:task_id)/appointments/to-suspended
 
@@ -78,19 +70,6 @@ class AppointmentsToSuspended(object):
                     HTTP/1.1 201 CREATED
                     Content-Type: application/vnd.bpm;v=1
 
-                    {
-                        "id": 101,
-                        "state": "RUNNING",
-                        "appointment": "SUSPENDED",
-                        "task_class_name": "package.example.SomeProcess",
-                        "app_code": "qtrelease",
-                        "creator": "mattsu",
-                        "create_time": "2013-12-8 12:00:00 01.00",
-                        "complete_time": "2013-12-8 12:00:07.30",
-                        "app_data": {
-                            "ijobs_task_id": "1445"
-                        },
-                        "ref_self": "/tasks/101"
-                    }
+                    {{ example_task|render:"{'id':101,'appointment':'SUSPENDED'}" }}
         """
         pass

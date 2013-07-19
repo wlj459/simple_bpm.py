@@ -4,6 +4,7 @@ from bpm.kernel.models import Task
 from bpm.kernel.states import READY
 from bpm.webservice.kernel.task import TaskResource
 from bpm.webservice.utils import CT_V1
+from bpm.webservice.utils import render_doc
 
 
 class TransitionsToReady(object):
@@ -11,6 +12,7 @@ class TransitionsToReady(object):
     继续执行任务的请求
     """
     @classmethod
+    @render_doc
     def post(cls, request, task_instance):
         """
         .. http:post:: /task/(int:task_id)/transitions/to-ready
@@ -38,19 +40,7 @@ class TransitionsToReady(object):
                     HTTP/1.1 201 CREATED
                     Content-Type: application/vnd.bpm;v=1
 
-                    {
-                        "id": 101,
-                        "state": "SUSPENDED",
-                        "task_class_name": "package.example.SomeProcess",
-                        "app_code": "qtrelease",
-                        "creator": "mattsu",
-                        "create_time": "2013-12-8 12:00:00 01.00",
-                        "complete_time": "2013-12-8 12:00:07.30",
-                        "app_data": {
-                            "ijobs_task_id": "1445"
-                        },
-                        "ref_self": "/tasks/101"
-                    }
+                    {{ example_task|render:"{'id':101,'state':'READY'}" }}
         """
         try:
             result = Task.objects.transit(task_instance, READY)

@@ -1,8 +1,11 @@
+from bpm.webservice.utils import render_doc
 # -*- coding: utf-8 -*-
 class TasksResource(object):
     """任务列表资源，代表某一类任务
     """
-    def post(self):
+    @classmethod
+    @render_doc
+    def post(cls):
         """
         .. http:post:: /tasks/(str:task_class_name)
 
@@ -36,14 +39,13 @@ class TasksResource(object):
                     HTTP/1.1 201 CREATED
                     Content-Type: application/vnd.bpm;v=1
 
-                    {
-                        "id": 17643,
-                        "ref_self": "/tasks/17643"
-                    }
+                    {{ example_task|render:"{'id':101}" }}
         """
         pass
 
-    def get(self):
+    @classmethod
+    @render_doc
+    def get(cls):
         """
         .. http:get:: /tasks/(str:task_class_name)
 
@@ -71,31 +73,7 @@ class TasksResource(object):
 
                     {
                         "tasks": [
-                            {
-                                "id": 17643,
-                                "state": "RUNNING",
-                                "task_class_name": "package.example.SomeProcess",
-                                "app_code": "qtrelease",
-                                "creator": "mattsu",
-                                "create_time": "2013-12-8 12:00:00 01.00",
-                                "complete_time": "2013-12-8 12:00:07.30",
-                                "app_data": {
-                                    "ijobs_task_id": "1445"
-                                },
-                                "ref_self": "/tasks/17643"
-                            }, {
-                                "id": 17644,
-                                "state": "RUNNING",
-                                "task_class_name": "package.example.SomeProcess",
-                                "app_code": "qtrelease",
-                                "creator": "mattsu",
-                                "create_time": "2013-12-8 12:01:00.00",
-                                "complete_time": "2013-12-8 12:01:07.30",
-                                "app_data": {
-                                    "ijobs_task_id": "1446"
-                                },
-                                "ref_self": "/tasks/17644"
-                            }
+                            {{ example_task|render:"{'id':101,'indention_level':7}" }}, {{ example_task|render:"{'id':102,'indention_level':7}" }}
                         ],
                         "ref_self": "/tasks/package.example.SomeProcess/by-50-tasks-pages/103",
                         "ref_previous": "/tasks/package.example.SomeProcess/by-50-tasks-pages/102",

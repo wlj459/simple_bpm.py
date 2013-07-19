@@ -1,9 +1,11 @@
+from bpm.webservice.utils import render_doc
 # -*- coding: utf-8 -*-
 class Tries(object):
     """
     本资源代表一个任务的所有重试集合
     """
-    def post(self):
+    @classmethod
+    def post(cls):
         """
         .. http:post:: /tasks/(int:task_id)/tries
 
@@ -45,7 +47,9 @@ class Tries(object):
         """
         pass
 
-    def get(self):
+    @classmethod
+    @render_doc
+    def get(cls):
         """
         .. http:get:: /tasks/(int:task_id)/tries
 
@@ -73,31 +77,7 @@ class Tries(object):
 
                     {
                         "tasks": [
-                            {
-                                "id": 100,
-                                "state": "FAILURE",
-                                "task_class_name": "package.example.SomeProcess",
-                                "app_code": "qtrelease",
-                                "creator": "mattsu",
-                                "create_time": "2013-12-8 12:00:00 01.00",
-                                "complete_time": "2013-12-8 12:00:07.30",
-                                "app_data": {
-                                    "ijobs_task_id": "1445"
-                                },
-                                "ref_self": "/tasks/100"
-                            }, {
-                                "id": 101,
-                                "state": "RUNNING",
-                                "task_class_name": "package.example.SomeProcess",
-                                "app_code": "qtrelease",
-                                "creator": "mattsu",
-                                "create_time": "2013-12-8 12:01:00.00",
-                                "complete_time": "2013-12-8 12:01:07.30",
-                                "app_data": {
-                                    "ijobs_task_id": "1446"
-                                },
-                                "ref_self": "/tasks/101"
-                            }
+                            {{ example_task|render:"{'id':100, 'state':'FAILURE', 'indention_level': 7}" }}, {{ example_task|render:"{'id':101, 'state':'RUNNING', 'indention_level':7}" }}
                         ],
                         "form_retry": {
                             "action": "/tasks/101/tries",

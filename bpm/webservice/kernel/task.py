@@ -34,7 +34,7 @@ class TaskResource(object):
                     HTTP/1.1 200 OK
                     Content-Type: application/vnd.bpm;v=1
 
-                    {{ example_task|indent }}
+                    {{ example_task|render:"{'id':101}" }}
         """
         pass
 
