@@ -1,5 +1,8 @@
-from bpm.webservice.utils import render_doc
 # -*- coding: utf-8 -*-
+from bpm.webservice.utils import render_doc
+import json
+from django.http import HttpResponse
+
 class TasksResource(object):
     """任务列表资源，代表某一类任务
     """
@@ -45,7 +48,7 @@ class TasksResource(object):
 
     @classmethod
     @render_doc
-    def get(cls):
+    def get(cls, task_class_name):
         """
         .. http:get:: /tasks/(str:task_class_name)
 
@@ -86,4 +89,4 @@ class TasksResource(object):
                         }
                     }
         """
-        pass
+        return HttpResponse(json.dumps([]))

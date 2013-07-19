@@ -6,6 +6,7 @@ from django.views.decorators.http import require_GET, \
 from django.views.decorators.csrf import csrf_exempt
 from bpm.kernel.models import Task
 from bpm.webservice.kernel.transitions import TransitionsToReady
+from bpm.webservice.kernel.tasks import TasksResource
 from bpm.webservice.utils import CT_V1
 
 
@@ -19,6 +20,5 @@ def transitions_to_ready(request, task_id):
     else:
         return TransitionsToReady.post(request, task_model)
 
-@require_GET
 def list_tasks(request, task_class_name):
-    return HttpResponse(task_class_name)
+    return TasksResource.get(task_class_name)
