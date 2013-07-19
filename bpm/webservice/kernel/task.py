@@ -40,11 +40,11 @@ class TaskResource(object):
 
 
     @classmethod
-    def output(cls, t_instance):
-        task_info = {
-            "id": t_instance.id,
-            "state": t_instance.state,
-            "task_class_name": t_instance.name,
+    def dump_task(cls, task_model):
+        task_resource = {
+            "id": task_model.id,
+            "state": task_model.state,
+            "task_class_name": task_model.name,
             # "app_code": "qtrelease",
             # "creator": "mattsu",
             # "create_time": "2013-12-8 12:00:00 01.00",
@@ -53,10 +53,10 @@ class TaskResource(object):
             #     "ijobs_task_id": "1445"
             # },
             "ref_self": "/task/101/",
-            "parent": t_instance.id,
-            "exec_kwargs": t_instance.kwargs,
-            "data": t_instance.data,
-            "ex_data": t_instance.ex_data,
-            "return_code": t_instance.return_code,
+            "parent": task_model.id,
+            "exec_kwargs": task_model.kwargs,
+            "data": task_model.data,
+            "ex_data": task_model.ex_data,
+            "return_code": task_model.return_code,
         }
-        return json.dumps(task_info)
+        return json.dumps(task_resource)

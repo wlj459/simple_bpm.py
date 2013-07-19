@@ -13,8 +13,8 @@ from bpm.webservice.utils import CT_V1
 @csrf_exempt
 def transitions_to_ready(request, task_id):
     try:
-        task_instance = Task.objects.get(pk=task_id)
+        task_model = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:
         return HttpResponse('Task not found by id(%s)' % task_id, CT_V1, 404)
     else:
-        return TransitionsToReady.post(request, task_instance)
+        return TransitionsToReady.post(request, task_model)

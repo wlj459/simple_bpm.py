@@ -5,6 +5,9 @@ from bpm.kernel.states import READY
 from bpm.webservice.kernel.task import TaskResource
 from bpm.webservice.utils import CT_V1
 from bpm.webservice.utils import render_doc
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TransitionsToReady(object):
@@ -13,7 +16,7 @@ class TransitionsToReady(object):
     """
     @classmethod
     @render_doc
-    def post(cls, request, task_instance):
+    def post(cls, request, task_model):
         """
         .. http:post:: /task/(int:task_id)/transitions/to-ready
 
@@ -43,14 +46,16 @@ class TransitionsToReady(object):
                     {{ example_task|render:"{'id':101,'state':'READY'}" }}
         """
         try:
-            result = Task.objects.transit(task_instance, READY)
+            result = Task.objects.transit(task_model, READY)
         except Exception, e:
+            LOGGER.exception('failed to transit task to ready: %s' % task_model)
             return HttpResponse('Exception during transition: %s' % e,
                                 CT_V1, 500)
         else:
             if result:
-                return HttpResponse(TaskResource.output(task_instance),
+                return HttpResponse(TaskResource.dump_task(task_model),
                                     CT_V1, 200)
             else:
+                LOGGER.error('failed to transit task to ready: %s' % task_model)
                 return HttpResponse('Current status is unable to transit to ready',
                                     CT_V1, 412)
