@@ -18,3 +18,7 @@ def transitions_to_ready(request, task_id):
         return HttpResponse('Task not found by id(%s)' % task_id, CT_V1, 404)
     else:
         return TransitionsToReady.post(request, task_model)
+
+@require_GET
+def list_tasks(request, task_class_name):
+    return HttpResponse(task_class_name)
