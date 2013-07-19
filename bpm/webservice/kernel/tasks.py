@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
-from bpm.webservice.utils import render_doc
 import json
+
 from django.http import HttpResponse
+
+from bpm.webservice.utils import render_doc
+from bpm.kernel.models import Task
+from .task import TaskResource
+
 
 class TasksResource(object):
     """任务列表资源，代表某一类任务
     """
+
     @classmethod
     @render_doc
-    def post(cls):
+    def post(cls, task_class_name, exec_kwargs):
         """
         .. http:post:: /tasks/(str:task_class_name)
 
@@ -44,7 +50,8 @@ class TasksResource(object):
 
                     {{ example_task|render:"{'id':101}" }}
         """
-        pass
+        task_model = Task.objects.start(task_class_name, kwargs=exec_kwargs)
+        return HttpResponse(json.dumps(TaskResource.dump_task(task_model)))
 
     @classmethod
     @render_doc
@@ -89,4 +96,13 @@ class TasksResource(object):
                         }
                     }
         """
-        return HttpResponse(json.dumps([]))
+        return HttpResponse(json.dumps({
+            'tasks': [TaskResource.dump_task(task) for task in Task.objects.all()],
+            'form_create_task': {
+                'action': '/tasks/%s' % task_class_name,
+                'method': 'POST',
+                'body': {
+                    'exec_kwargs': {}
+                }
+            }
+        }))

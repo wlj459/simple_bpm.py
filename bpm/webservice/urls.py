@@ -9,6 +9,6 @@ urlpatterns = patterns('bpm.webservice.views',
     # url(r'^$', 'container.views.home', name='home'),
 
 
-    url(r'^tasks/(?P<task_class_name>[a-z_]{1}[a-z0-9_]*(\.[a-z_]{1}[a-z0-9_]*)*)', 'list_tasks'),
+    url(r'^tasks/(?P<task_class_name>.*)', 'handle_tasks_resource'),
     url(r'^task/(?P<task_id>\d+)/transitions/to-ready/', 'transitions_to_ready'),
 )

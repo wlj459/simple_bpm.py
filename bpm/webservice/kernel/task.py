@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 
 import json
 from bpm.webservice.utils import render_doc
@@ -59,4 +59,4 @@ class TaskResource(object):
             "ex_data": task_model.ex_data,
             "return_code": task_model.return_code,
         }
-        return json.dumps(task_resource)
+        return task_resource

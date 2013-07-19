@@ -8,6 +8,7 @@ from bpm.kernel.models import Task
 from bpm.webservice.kernel.transitions import TransitionsToReady
 from bpm.webservice.kernel.tasks import TasksResource
 from bpm.webservice.utils import CT_V1
+import httplib
 
 
 @require_POST
@@ -20,5 +21,12 @@ def transitions_to_ready(request, task_id):
     else:
         return TransitionsToReady.post(request, task_model)
 
-def list_tasks(request, task_class_name):
-    return TasksResource.get(task_class_name)
+@csrf_exempt
+def handle_tasks_resource(request, task_class_name):
+    if 'GET' == request.method:
+        return TasksResource.get(task_class_name)
+    elif 'POST' == request.method:
+        return TasksResource.post(task_class_name, request.POST.get('exec_kwargs'))
+    else:
+        return HttpResponse(status_code=httplib.METHOD_NOT_ALLOWED)
+

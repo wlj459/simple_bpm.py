@@ -52,7 +52,6 @@ def schedule(task_id):
 
 @celery.task(ignore_result=True)
 def initiate(task_id):
-
     try:
         task = Task.objects.get(pk=task_id, state=states.PENDING)
     except Task.DoesNotExist:
@@ -77,7 +76,6 @@ def initiate(task_id):
 
 @celery.task(ignore_result=True)
 def transit(task_id, to_state):
-
     try:
         task = Task.objects.get(pk=task_id)
     except Task.DoesNotExist:

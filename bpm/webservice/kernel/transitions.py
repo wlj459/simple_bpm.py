@@ -6,6 +6,8 @@ from bpm.webservice.kernel.task import TaskResource
 from bpm.webservice.utils import CT_V1
 from bpm.webservice.utils import render_doc
 import logging
+import httplib
+import json
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,12 +52,12 @@ class TransitionsToReady(object):
         except Exception, e:
             LOGGER.exception('failed to transit task to ready: %s' % task_model)
             return HttpResponse('Exception during transition: %s' % e,
-                                CT_V1, 500)
+                                CT_V1, httplib.INTERNAL_SERVER_ERROR)
         else:
             if result:
-                return HttpResponse(TaskResource.dump_task(task_model),
-                                    CT_V1, 200)
+                return HttpResponse(json.dumps(TaskResource.dump_task(task_model)),
+                                    CT_V1, httplib.OK)
             else:
                 LOGGER.error('failed to transit task to ready: %s' % task_model)
                 return HttpResponse('Current status is unable to transit to ready',
-                                    CT_V1, 412)
+                                    CT_V1, httplib.PRECONDITION_FAILED)
