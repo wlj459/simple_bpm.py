@@ -3,7 +3,7 @@ class Trace(object):
     """
     一个任务分解出的子任务构成的执行轨迹
     """
-    def get(self):
+    def get(cls):
         """
         .. http:get:: /tasks/(int:task_id)/trace
 

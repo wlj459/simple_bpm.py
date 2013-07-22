@@ -1,5 +1,6 @@
+# coding=utf-8
 from bpm.webservice.utils import render_doc
-# -*- coding: utf-8 -*-
+
 class Tries(object):
     """
     本资源代表一个任务的所有重试集合

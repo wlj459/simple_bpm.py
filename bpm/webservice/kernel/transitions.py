@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
+import logging
+import httplib
+import json
 from django.http import HttpResponse
 from bpm.kernel.models import Task
 from bpm.kernel.states import READY
 from bpm.webservice.kernel.task import TaskResource
 from bpm.webservice.utils import CT_V1
 from bpm.webservice.utils import render_doc
-import logging
-import httplib
-import json
 
 LOGGER = logging.getLogger(__name__)
 

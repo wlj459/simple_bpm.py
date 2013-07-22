@@ -53,6 +53,7 @@ class TasksResource(object):
         task_model = Task.objects.start(task_class_name, kwargs=exec_kwargs)
         return HttpResponse(json.dumps(TaskResource.dump_task(task_model)))
 
+
     @classmethod
     @render_doc
     def get(cls, task_class_name):

@@ -1,12 +1,13 @@
+# coding=utf-8
 from bpm.webservice.utils import render_doc
-# -*- coding: utf-8 -*-
+
 class AppointmentsToRevoked(object):
     """
     撤销任务的预约（请求任务在合适的时候撤销）
     """
     @classmethod
     @render_doc
-    def post(self):
+    def post(cls):
         """
         .. http:post:: /tasks/(int:task_id)/appointments/to-revoked
 
@@ -36,6 +37,7 @@ class AppointmentsToRevoked(object):
                     {{ example_task|render:"{'id':101,'appointment':'REVOKED'}" }}
         """
         pass
+
 
 class AppointmentsToSuspended(object):
     """
