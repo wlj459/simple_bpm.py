@@ -209,9 +209,9 @@ class AbstractProcess(AbstractBaseTaskBackend):
         :type return_code: int
         :return: 无返回值
         """
+        (data, ex_data, return_code), _ = clean(data, ex_data, return_code)
         task = self._model_object()
         if task is not None:
-            (data, ex_data, return_code), _ = clean(data, ex_data, return_code)
             task.complete(data, ex_data, return_code)
 
 
