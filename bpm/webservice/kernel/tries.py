@@ -1,12 +1,23 @@
 # coding=utf-8
+
+import logging
+import httplib
+import json
+from django.http import HttpResponse
+from bpm.kernel.models import Task
+from bpm.webservice.kernel.task import TaskResource
+from bpm.webservice.utils import CT_V1
 from bpm.webservice.utils import render_doc
+
+LOGGER = logging.getLogger(__name__)
+
 
 class Tries(object):
     """
     本资源代表一个任务的所有重试集合
     """
     @classmethod
-    def post(cls):
+    def post(cls, task_model):
         """
         .. http:post:: /tasks/(int:task_id)/tries
 
@@ -46,7 +57,21 @@ class Tries(object):
                         "ref_self": "/tasks/102"
                     }
         """
-        pass
+        try:
+            result = Task.objects.retry(task_model)
+        except Exception, e:
+            LOGGER.exception('failed to retry task: %s' % task_model)
+            return HttpResponse('Exception during retry: %s' % e,
+                                CT_V1, httplib.INTERNAL_SERVER_ERROR)
+        else:
+            if result:
+                return HttpResponse(json.dumps(TaskResource.dump_task(task_model)),
+                                    CT_V1, httplib.CREATED)
+            else:
+                LOGGER.error('failed to retry: %s' % task_model)
+                return HttpResponse('Current status is unable to retry',
+                                    CT_V1, httplib.PRECONDITION_FAILED)
+
 
     @classmethod
     @render_doc
@@ -89,4 +114,4 @@ class Tries(object):
                         }
                     }
         """
-        pass
+        pass  # TODO

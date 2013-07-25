@@ -36,11 +36,12 @@ class TaskResource(object):
 
                     {{ example_task|render:"{'id':101}" }}
         """
-        pass
+        pass # 逻辑在views里已经实现了
 
 
     @classmethod
     def dump_task(cls, task_model):
+        '''output task_model instance as json'''
         task_resource = {
             "id": task_model.id,
             "state": task_model.state,

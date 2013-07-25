@@ -26,7 +26,7 @@ class TransitionsToReady(object):
 
             :param task_id: 任务的id
             :type task_id: int
-            :status 200: 继续执行的请求下达成功。返回JSON类型，任务详情
+            :status 201: 继续执行的请求下达成功。返回JSON类型，任务详情
             :status 412: 因为任务状态不可继续执行失败。返回字符串类型，错误消息
             :status 404: 给定id的任务没有找到。返回字符串类型，错误消息
             :status 500: 其他错误。返回字符串类型，错误消息
@@ -56,7 +56,7 @@ class TransitionsToReady(object):
         else:
             if result:
                 return HttpResponse(json.dumps(TaskResource.dump_task(task_model)),
-                                    CT_V1, httplib.OK)
+                                    CT_V1, httplib.CREATED)
             else:
                 LOGGER.error('failed to transit task to ready: %s' % task_model)
                 return HttpResponse('Current status is unable to transit to ready',

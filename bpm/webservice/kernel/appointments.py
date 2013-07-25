@@ -1,5 +1,35 @@
 # coding=utf-8
+import logging
+import httplib
+import json
+from django.http import HttpResponse
+
+from bpm.kernel import states
+from bpm.kernel.models import Task
 from bpm.webservice.utils import render_doc
+from bpm.webservice.kernel.task import TaskResource
+from bpm.webservice.utils import CT_V1
+from bpm.webservice.utils import render_doc
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _appointment(task_model, to_state):
+    try:
+        result = task_model.appoint(to_state)
+    except Exception, e:
+        LOGGER.exception('failed to appoint task to %s: %s' % (to_state, task_model))
+        return HttpResponse('Exception during appointment: %s' % e,
+                            CT_V1, httplib.INTERNAL_SERVER_ERROR)
+    else:
+        if result:
+            return HttpResponse(json.dumps(TaskResource.dump_task(task_model)),
+                                CT_V1, httplib.OK)
+        else:
+            LOGGER.error('failed to appoint task to %s: %s' % (to_state, task_model))
+            return HttpResponse('Current status is unable to transit to ready',
+                                CT_V1, httplib.PRECONDITION_FAILED)
+
 
 class AppointmentsToRevoked(object):
     """
@@ -7,7 +37,7 @@ class AppointmentsToRevoked(object):
     """
     @classmethod
     @render_doc
-    def post(cls):
+    def post(cls, task_model):
         """
         .. http:post:: /tasks/(int:task_id)/appointments/to-revoked
 
@@ -36,7 +66,7 @@ class AppointmentsToRevoked(object):
 
                     {{ example_task|render:"{'id':101,'appointment':'REVOKED'}" }}
         """
-        pass
+        _appointment(task_model, states.REVOKED)
 
 
 class AppointmentsToSuspended(object):
@@ -45,7 +75,7 @@ class AppointmentsToSuspended(object):
     """
     @classmethod
     @render_doc
-    def post(cls):
+    def post(cls, task_model):
         """
         .. http:post:: /tasks/(int:task_id)/appointments/to-suspended
 
@@ -74,4 +104,4 @@ class AppointmentsToSuspended(object):
 
                     {{ example_task|render:"{'id':101,'appointment':'SUSPENDED'}" }}
         """
-        pass
+        return _appointment(task_model, states.SUSPENDED)
