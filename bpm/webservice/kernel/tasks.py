@@ -14,7 +14,7 @@ class TasksResource(object):
 
     @classmethod
     @render_doc
-    def post(cls, task_class_name, exec_kwargs):
+    def post(cls, task_class_name, exec_args, exec_kwargs):
         """
         .. http:post:: /tasks/(str:task_class_name)
 
@@ -22,6 +22,7 @@ class TasksResource(object):
 
             :param task_class_name: 任务定义的Python类名
             :type task_class_name: str
+            :jsonparam exec_args: 类型为list。执行任务时使用的参数列表（列表形式），传递给Task.start方法
             :jsonparam exec_kwargs: 类型为dict。执行任务时使用的关键字参数（key=value形式），传递给Task.start方法
             :status 201: 创建任务成功。返回JSON类型，创建的任务资源
             :status 400: 创建任务的请求参数不是JSON或者exec_kwargs不是dict类型。返回字符串类型，错误消息
@@ -50,7 +51,7 @@ class TasksResource(object):
 
                     {{ example_task|render:"{'id':101}" }}
         """
-        task_model = Task.objects.start(task_class_name, kwargs=exec_kwargs)
+        task_model = Task.objects.start(task_class_name, args=exec_args, kwargs=exec_kwargs)
         return HttpResponse(json.dumps(TaskResource.dump_task(task_model)))
 
 

@@ -21,7 +21,9 @@ def handle_tasks_resource(request, task_class_name):
     if 'GET' == request.method:
         return TasksResource.get(task_class_name)
     elif 'POST' == request.method:
-        return TasksResource.post(task_class_name, request.POST.get('exec_kwargs'))
+        return TasksResource.post(task_class_name,
+                                  json.loads(request.POST.get('exec_args', '[]')),
+                                  json.loads(request.POST.get('exec_kwargs', '{}')))
 
 
 @require_GET
