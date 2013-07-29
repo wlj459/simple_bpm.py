@@ -65,7 +65,6 @@ class TasksResource(object):
             :param task_class_name: 任务定义的Python类名
             :type task_class_name: str
             :status 200: 获取任务列表成功。返回JSON类型，任务列表
-            :status 501: 执行的任务定义没有找到。返回字符串类型，错误消息
             :status 500: 其他错误。返回字符串类型，错误消息
 
             **请求的例子**:
@@ -98,7 +97,8 @@ class TasksResource(object):
                     }
         """
         return HttpResponse(json.dumps({
-            'tasks': [TaskResource.dump_task(task) for task in Task.objects.all()],
+            'tasks': [TaskResource.dump_task(task) for task in
+                        Task.objects.filter(name=task_class_name)],
             'form_create_task': {
                 'action': '/tasks/%s' % task_class_name,
                 'method': 'POST',

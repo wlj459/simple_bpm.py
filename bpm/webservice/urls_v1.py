@@ -12,7 +12,7 @@ urlpatterns = patterns('bpm.webservice.views_v1',
     url(r'^tasks/(?P<task_class_name>.*)/$', 'handle_tasks_resource'),
 
     # 任务详情
-        url(r'^task/(?P<task_id>\d+)/$', 'handle_task_resource'),
+    url(r'^task/(?P<task_id>\d+)/$', 'handle_task_resource'),
 
     # # 撤销
     url(r'^task/(?P<task_id>\d+)/appointments/to-revoked/$', 'handle_appt_resrc_to_revoked'),
