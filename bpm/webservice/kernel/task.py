@@ -55,6 +55,7 @@ class TaskResource(object):
             # },
             "ref_self": "/task/101/",
             "parent": task_model.id,
+            "exec_args": task_model.args,
             "exec_kwargs": task_model.kwargs,
             "data": task_model.data,
             "ex_data": task_model.ex_data,
