@@ -90,9 +90,12 @@ class TaskManager(models.Manager):
             ).update(**kwargs)
 
             if rows:
+
                 for k, v in kwargs.iteritems():
+
                     setattr(instance, k, v)
 
+                #matt: 动态获取状态信号,不过只有部分状态需要信号响应
                 state_change_signal = getattr(signals,
                                               'task_' + to_state.lower())
 

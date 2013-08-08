@@ -73,6 +73,8 @@ class TaskHandler(object):
         """
         task = self._model_object()
         while not task or task.state not in states.ARCHIVE_STATES:
+            #matt: 释放执行，stackless会调度到其他tasklet执行，等其他tasklet执行完成后再掉回来
+            #? stackless.schedule时是串行执行还是并行分时间片执行
             stackless.schedule()
             task = self._model_object()
 
@@ -138,6 +140,7 @@ class AbstractProcess(AbstractBaseTaskBackend):
     def _register(self, obj, task_name, obj_type=None):
         """
         register
+        #? 默认是基类的tasklet注册，对于process也可以用来注册handler
         """
         if obj_type:
             getattr(self, '_%s_registry' % obj_type)[obj] = task_name
@@ -146,7 +149,7 @@ class AbstractProcess(AbstractBaseTaskBackend):
 
     def _schedule(self):
         """
-        schedule
+        schedule, 判断进程是否可以再被schedule
         """
         archived_handler_count = 0
         blocked_handler_count = 0

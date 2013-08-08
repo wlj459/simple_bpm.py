@@ -84,6 +84,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
             except Task.DoesNotExist:
                 pass  # TODO
             else:
+                #matt: 新建一个非task的额外的tasklet
                 self._register(stackless.tasklet(self.on_schedule)(),
                                task.name)
 

@@ -4,6 +4,7 @@ bpm.kernel.reactors.celery
 ==========================
 
 此模块定义了所需的 celery signal 的 handlers
+#matt: milestone4里会去掉celery的signal，以免跟django的signal混淆
 """
 from __future__ import absolute_import
 
