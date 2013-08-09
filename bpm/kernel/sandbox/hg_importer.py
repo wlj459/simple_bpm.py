@@ -17,6 +17,7 @@ LOGGER = logging.getLogger(__name__)
 MERCURIAL_SYS_PATH = '__MERCURIAL__'
 current_finder = None
 
+#matt: 通过with操作来控制代码进入时的import，并在离开代码时恢复
 @contextlib.contextmanager
 def enter_context():
     try:

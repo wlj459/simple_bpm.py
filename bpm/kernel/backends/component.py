@@ -117,7 +117,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
         return False
 
-    #? 组件如果不显示调用complete，而是使用外部回调，是什么机制
+
     def complete(self, data=None, ex_data=None, return_code=0):
         """
         把组件的状态置为已完成，并设置返回值。虽然本调用后面的语句仍然会被执行，但是不推荐这么做。
