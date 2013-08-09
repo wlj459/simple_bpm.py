@@ -49,7 +49,8 @@ def schedule(task_id):
                 stackless.schedule()
                 #matt: 执行到不能被_schedule为止，
                 #matt: 理论上最多执行两次，第一次schedule自己和子任务，第二次schedule子任务
-                #matt: 如果没有子人物则只有一次
+                #matt: 如果没有子任务则只有一次
+                #matt: 对于组件，此处必定返回false, 也就是只执行一次
                 while backend._schedule():
                     stackless.schedule()
 

@@ -42,7 +42,9 @@ class AbstractBaseTaskBackend(object):
         else:
             raise Exception  # TODO
 
-    # 使用每次取最新记录（在一次transaction内部，不管外部怎么改变记录，查询记录时总是不变的)
+    #matt:
+    # commit_on_success会在方法进入时启动事务，并在方法结束时commit，
+    # 这样可以保证取到的是数据库的最新记录（在一次transaction内部，不管外部怎么改变记录，查询记录时总是不变的)
     @transaction.commit_on_success()  # Important !
     def _model_object(self):
         """

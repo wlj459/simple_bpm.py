@@ -1,8 +1,10 @@
+# coding=utf-8
 import json
-
 import requests
 import requests.packages.urllib3.util
 
+
+# 此为bpm.py的restful webservice api的远程调用客户端
 
 __all__ = ['list_tasks', 'create_task']
 

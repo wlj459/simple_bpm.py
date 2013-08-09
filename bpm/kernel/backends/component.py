@@ -16,11 +16,18 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
     * 如果是短任务：
         在start方法内调用complete结束任务
+
+    #matt: 也就是使用set_default_scheduler
     * 如果是长任务，而且是否结束是基于轮询问的：
         在start方法内调用set_scheduler设置轮询的间隔。实现on_schedule方法，实现轮询的逻辑并在结束的时候调用complete结束轮询。
-    * 如果是长任务，而且结束与否是基于外部回调的：
-        在start方法内调用set_scheduler，设置轮询间隔为-1。如果外部回调会提供return_code等返回值，则无需实现on_schedule方法。
-        如果外部回调无法提供return_code等返回值，则需要实现on_schedule方法，去访问外部资源获取return_code，然后调用complete结束。
+
+    #matt:
+    * 如果是长任务，而且结束与否是基于外部回调的：（#matt: 也就是外部回调complete的api或者transition-to-ready的api）
+        1) 如果外部回调会直接调用complete api并提供return_code等返回值，则不需要使用set_scheduler,也就无需实现on_schedule方法。
+        2) 如果外部回调不能提供return_code等返回值，则调用transition-to-ready api,  让任务自己再被唤醒去查询结果，
+           则在start方法内调用set_null_scheduler，设置轮询间隔为-1, 并实现on_schedule方法，
+           去访问外部资源获取return_code，然后调用complete结束。
+           这个case可以参考ijobs adapter组件的实现，其需要自己去ijobs系统取执行结果.
     """
 
     def __init__(self, *args, **kwargs):
@@ -65,6 +72,10 @@ class AbstractComponent(AbstractBaseTaskBackend):
     def set_scheduler(self, on_schedule, interval):
         """
         把组件设置为基于轮询的，轮询间隔为固定的时间
+        #matt: 实现原理，定期功能使用的是celery的倒计时任务transit_lazy
+        #matt: 它在一定时间后将查询逻辑(on_schedule)置为READY，然后自己先变成成BLOCKED等待被complete
+        #matt: 在一定时间后，自己被设置为READY并开始执行
+        #matt: 如果on_schedule还是没有complete，则会继续下去
 
         :param interval: 生成一组间隔时间的（伪）生成器实例
         :return: 无返回值
@@ -76,6 +87,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
         self.on_schedule = on_schedule
         self._schedule()
 
+    #matt: 初始化后，引擎就会自动执行start，此处主要用于部署on_schedule
     def _schedule(self):
         if self.active and hasattr(self, '_interval'):
             print 'component schedule'
@@ -84,10 +96,12 @@ class AbstractComponent(AbstractBaseTaskBackend):
             except Task.DoesNotExist:
                 pass  # TODO
             else:
-                #matt: 新建一个非task的额外的tasklet
+                #matt: 新建一个非task的额外的tasklet, 用于轮询
                 self._register(stackless.tasklet(self.on_schedule)(),
                                task.name)
 
+                # 如果有countdown，则准备下次定时轮询
+                # 如果没有countdown(比如等待外部回调api的)，则直接返回False,进入BLOCKED状态
                 countdown = self._interval.next()
                 if countdown is not None:
                     MIN_INTERVAL = getattr(settings, 'COMPONENT_MIN_INTERVAL', DEFAULT_MIN_INTERVAL)
@@ -103,6 +117,7 @@ class AbstractComponent(AbstractBaseTaskBackend):
 
         return False
 
+    #? 组件如果不显示调用complete，而是使用外部回调，是什么机制
     def complete(self, data=None, ex_data=None, return_code=0):
         """
         把组件的状态置为已完成，并设置返回值。虽然本调用后面的语句仍然会被执行，但是不推荐这么做。
@@ -138,6 +153,7 @@ class NullIntervalGenerator(object):
     def __init__(self):
         self.count = 0
 
+    #matt 此处没有返回。。。return None
     def next(self):
         self.count += 1
 
